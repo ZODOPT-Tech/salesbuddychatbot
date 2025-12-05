@@ -1,5 +1,8 @@
 import streamlit as st
 import mysql.connector
+import boto3
+import json
+import bcrypt # You need to install this: pip install bcrypt
 
 # --------------------------------------------------------
 # -------------------- PROFESSIONAL CSS -------------------
@@ -7,8 +10,9 @@ import mysql.connector
 CSS = """
 <style>
 
-body {
-    background-color: #f5f7fa;
+/* Streamlit main background */
+.stApp {
+    background-color: #f5f7fa; 
 }
 
 /* LOGIN CARD */
@@ -54,7 +58,7 @@ body {
     box-shadow: 0px 0px 0px 2px rgba(40, 167, 69, 0.25) !important;
 }
 
-/* PRIMARY LOGIN BUTTON (Ensuring full width) */
+/* PRIMARY LOGIN BUTTON */
 div[data-testid="stForm"] > div > div:nth-child(4) > div > div > button { 
     background-color: #28a745 !important;
     color: white !important;
@@ -71,33 +75,33 @@ div[data-testid="stForm"] > div > div:nth-child(4) > div > div > button:hover {
     background-color: #1f7a38 !important;
 }
 
-/* LINK BUTTON STYLE (for Forgot Password & Sign Up) */
-/* Targets buttons created in the bottom columns for link styling */
+/* Bottom links container adjustment */
+.bottom-links {
+    margin-top: 25px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px; 
+}
+
+/* Link Button Styling (for Forgot Password & Sign Up) */
 .action-link-button {
-    background-color: #28a745 !important; /* Green background */
-    color: white !important; /* White text */
+    background-color: transparent !important; /* Make background clear */
+    color: #28a745 !important; /* Green text color */
     border: none !important;
     font-weight: 600 !important;
     cursor: pointer !important;
     padding: 10px 0 !important;
     margin: 0 !important;
     font-size: 15px !important;
-    border-radius: 8px !important;
+    border-radius: 0px !important; 
     box-shadow: none !important;
-    width: 100% !important; /* Forces equal width within the column */
+    text-align: center;
+    width: 100% !important;
 }
 
 .action-link-button:hover {
-    background-color: #1f7a38 !important; /* Darker green hover */
-    text-decoration: none !important;
-}
-
-/* Bottom links container adjustment */
-.bottom-links {
-    margin-top: 25px;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px; /* Space between the two buttons */
+    text-decoration: underline !important;
+    background-color: transparent !important;
 }
 </style>
 """
@@ -106,24 +110,65 @@ st.markdown(CSS, unsafe_allow_html=True)
 
 
 # --------------------------------------------------------
+# ---------------- AWS SECRETS CONFIGURATION --------------
+# --------------------------------------------------------
+# Define the SECRET_ARN statically for this module
+SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
+
+@st.cache_resource
+def get_db_secrets():
+    """Fetch DB credentials from AWS Secrets Manager using the correct uppercase keys."""
+    try:
+        client = boto3.client("secretsmanager", region_name="ap-south-1")
+        resp = client.get_secret_value(SecretId=SECRET_ARN)
+        raw = json.loads(resp["SecretString"])
+        
+        creds = {
+            "DB_HOST": raw["DB_HOST"],
+            "DB_USER": raw["DB_USER"],
+            "DB_PASSWORD": raw["DB_PASSWORD"],
+            "DB_NAME": raw["DB_NAME"]
+        }
+        return creds
+
+    except KeyError as e:
+        raise RuntimeError(f"Configuration Error: Key '{e.args[0]}' not found in AWS Secret JSON. Check case sensitivity.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to connect to AWS Secrets Manager: {e}")
+
+
+# --------------------------------------------------------
 # ------------------ MYSQL CONNECTION ---------------------
 # --------------------------------------------------------
+@st.cache_resource
 def get_conn():
-    # NOTE: Replace with your actual connection details
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="yourpwd",
-        database="smart_chatbot_db"
-    )
+    """Connect to MySQL using AWS secrets."""
+    try:
+        creds = get_db_secrets()
+        
+        conn = mysql.connector.connect(
+            host=creds["DB_HOST"],
+            user=creds["DB_USER"],
+            password=creds["DB_PASSWORD"],
+            database=creds["DB_NAME"],
+            charset="utf8mb4"
+        )
+        return conn
+
+    except mysql.connector.Error as e:
+        st.error(f"Database Connection Error: Could not connect to the database. {e}")
+        st.stop()
+    except RuntimeError as e:
+        st.error(f"Configuration Error: {e}")
+        st.stop()
 
 
 # --------------------------------------------------------
 # ------------------ LOGIN RENDER FUNCTION ----------------
 # --------------------------------------------------------
 def render(navigate):
-    # Use st.form to group components and handle input submission cleanly,
-    # which often helps with the multi-click issue for the primary button.
+    st.set_page_config(layout="centered")
+    
     with st.container():
         st.markdown("<div class='login-card'>", unsafe_allow_html=True)
 
@@ -139,7 +184,6 @@ def render(navigate):
         st.markdown("<h2 class='title-header' style='text-align:center;'>Welcome to Sales Buddy</h2>", unsafe_allow_html=True)
         st.markdown("<p class='subtitle' style='text-align:center;'>Access your account</p>", unsafe_allow_html=True)
 
-        # Use st.form for the login logic
         with st.form(key='login_form'):
             # ---------------- INPUT FIELDS ----------------
             email = st.text_input("Email", placeholder="your.email@company.com", key="email_login")
@@ -152,47 +196,58 @@ def render(navigate):
             submitted = st.form_submit_button("Log In", use_container_width=True, key="login_button_submit")
 
             if submitted:
-                try:
-                    conn = get_conn()
-                    cur = conn.cursor(dictionary=True)
+                # Basic input validation
+                if not email or not password:
+                    st.error("Please enter both email and password.")
+                else:
+                    try:
+                        conn = get_conn()
+                        cur = conn.cursor(dictionary=True)
 
-                    cur.execute("SELECT * FROM users WHERE email=%s", (email,))
-                    user = cur.fetchone()
+                        # Fetch user details based on email
+                        cur.execute("SELECT password FROM users WHERE email=%s", (email,))
+                        user_record = cur.fetchone()
+                        cur.close()
 
-                    if user and user["password"] == password:
-                        st.success("Login successful! Redirecting...")
-                        navigate("chatbot")
-                    else:
-                        st.error("Incorrect email or password")
+                        if user_record:
+                            # ⚠️ SECURE: Verify the entered password against the stored hash
+                            stored_hash = user_record["password"].encode('utf-8')
+                            
+                            if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+                                st.success("Login successful! Redirecting...")
+                                # In a real app, you would set st.session_state here
+                                navigate("chatbot")
+                            else:
+                                st.error("Incorrect email or password")
+                        else:
+                            st.error("Incorrect email or password")
 
-                    conn.close()
+                    except mysql.connector.Error as err:
+                        st.error(f"Database Query Error: {err}")
+                    except Exception as e:
+                        st.error(f"Unexpected Error during login: {e}")
 
-                except Exception as e:
-                    st.error(f"Error: {e}")
-
-        # ---------------- FORGOT + SIGNUP (SAME LINE, SAME WIDTH, GREEN BUTTONS) ----------------
+        # ---------------- FORGOT + SIGNUP LINKS ----------------
         st.markdown("<div class='bottom-links'>", unsafe_allow_html=True)
         
-        # Use two equal columns (1, 1) to force same width
         col_fp, col_su = st.columns(2)
         
         with col_fp:
-            # Forgot Password Button (Green, full width of column)
+            # Forgot Password Link
             if st.button("Forgot Password?", key="fp-btn-stable"):
                 navigate("forgot_password")
-            
+        
         with col_su:
-            # Sign Up Button (Green, full width of column)
+            # Sign Up Link
             if st.button("Sign Up", key="su-btn-stable"):
                 navigate("signup")
                 
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # --- CSS Styling Application Hack ---
-        # Apply the 'action-link-button' style to the two buttons placed in the bottom-links container
+        # --- CSS Styling Application (Hack to apply classes to Streamlit buttons) ---
         st.markdown("""
             <script>
-            var buttons = window.parent.document.querySelectorAll('div[data-testid="stButton"] button');
+            var buttons = window.parent.document.querySelectorAll('div[data-testid="stColumn"] button');
             buttons.forEach(function(button) {
                 var text = button.innerText.trim();
                 // Check for exact button text to apply link styling
@@ -205,3 +260,26 @@ def render(navigate):
 
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+
+# --------------------------------------------------------
+# ------------------ APP EXECUTION EXAMPLE ----------------
+# --------------------------------------------------------
+if __name__ == "__main__":
+    # Placeholder for the navigation function
+    def placeholder_navigate(page):
+        st.session_state.page = page
+        st.info(f"Navigation triggered: Should go to the '{page}' page now.")
+
+    if 'page' not in st.session_state:
+        st.session_state.page = "login"
+
+    # Only render the login page if needed.
+    if st.session_state.page == "login":
+        render(placeholder_navigate)
+    else:
+        # Simple placeholder for other pages
+        st.header(f"Page: {st.session_state.page.capitalize()}")
+        if st.button("Back to Login"):
+            st.session_state.page = "login"
+            st.rerun()
