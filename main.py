@@ -7,7 +7,8 @@ import chatbot
 # --------------------------------------------------------
 # ------------------ CONFIGURATION -----------------------
 # --------------------------------------------------------
-st.set_page_config(page_title="Sales Buddy Chatbot", page_icon="🤖", layout="centered")
+# Use 'wide' layout for the main app for flexibility
+st.set_page_config(page_title="Sales Buddy Chatbot", page_icon="🤖", layout="wide") 
 
 # --------------------------------------------------------
 # ----------------- SESSION STATE & NAVIGATION -----------
@@ -28,7 +29,16 @@ if "logged_in" not in st.session_state:
     
 # Store user details upon successful login
 if "user_data" not in st.session_state:
-    st.session_state.user_data = {}
+    # Initialize with default structure
+    st.session_state.user_data = {"full_name": "Guest User", "email": ""} 
+    
+# 🆕 Initialize the chat history (used by chatbot.py)
+if "chat" not in st.session_state:
+    st.session_state.chat = [{"role": "ai", "content": "Hello! I have loaded your CRM data. Ask me anything about your leads using the examples below!"}]
+
+# 🆕 Initialize the chat status flag (used by chatbot.py to switch views)
+if "chat_initiated" not in st.session_state:
+    st.session_state.chat_initiated = False
 
 
 def navigate(page):
@@ -59,7 +69,8 @@ elif st.session_state.page == "forgot_password":
 elif st.session_state.page == "chatbot":
     # Check if the user is authenticated before showing the chatbot
     if st.session_state.logged_in:
-        chatbot.render(navigate)
+        # ✅ FIX: Pass the required 'user_data' from session state
+        chatbot.render(navigate, st.session_state.user_data) 
     else:
         # If somehow they jumped here without logging in, send them back
         st.warning("Please log in to access the chatbot.")
