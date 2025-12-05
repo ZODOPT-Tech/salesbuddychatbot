@@ -2,6 +2,7 @@ import streamlit as st
 import mysql.connector
 import boto3
 import json
+import bcrypt # 👈 REQUIRED: Install with 'pip install bcrypt'
 
 # --------------------------------------------------------
 # -------------------- CSS (Green Theme) ------------------
@@ -68,13 +69,9 @@ st.markdown(CSS, unsafe_allow_html=True)
 # NOTE: Using a static ARN as provided in the original code.
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
+@st.cache_resource
 def get_db_secrets():
-    """
-    Fetch DB credentials from AWS Secrets Manager.
-    
-    CORRECTED: Uses the exact uppercase keys (DB_HOST, DB_USER, etc.) 
-    as configured in the AWS Secret value.
-    """
+    """Fetch DB credentials from AWS Secrets Manager using the correct uppercase keys."""
     try:
         # Initialize Boto3 client
         client = boto3.client("secretsmanager", region_name="ap-south-1")
@@ -94,10 +91,8 @@ def get_db_secrets():
         return creds
 
     except KeyError as e:
-        # Handle the specific case where an expected key is missing
         raise RuntimeError(f"Failed to load DB secrets: Key '{e.args[0]}' not found in AWS Secret. Please check your AWS secret key names (expected: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME).")
     except Exception as e:
-        # Handle other AWS/connection exceptions
         raise RuntimeError(f"Failed to load DB secrets: {e}")
 
 
@@ -138,9 +133,6 @@ def get_conn():
 def render(navigate):
     """
     Renders the signup form and handles user registration logic.
-    
-    NOTE: The 'navigate' function must be defined in your main app structure 
-    (e.g., using st.session_state for navigation).
     """
 
     st.markdown("<div class='signup-box'>", unsafe_allow_html=True)
@@ -173,7 +165,13 @@ def render(navigate):
             st.error("Passwords do not match!")
         else:
             try:
-                # Get cached connection
+                # 1. HASH THE PASSWORD 🔒
+                # bcrypt requires the password to be encoded to bytes
+                hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+                # The stored hash must be decoded back to a string for MySQL storage
+                hashed_password_str = hashed_password.decode('utf-8')
+                
+                # 2. DATABASE OPERATION
                 conn = get_conn()
                 cur = conn.cursor()
 
@@ -181,19 +179,22 @@ def render(navigate):
                     INSERT INTO users(full_name, email, company, mobile, password)
                     VALUES (%s, %s, %s, %s, %s)
                 """
-                # Note: In a real application, you should hash the password 
-                # (e.g., using bcrypt) before storing it in the database!
-                cur.execute(query, (full_name, email, company, mobile, password))
+                # Use the HASHED password for insertion
+                cur.execute(query, (full_name, email, company, mobile, hashed_password_str))
                 conn.commit()
                 cur.close()
 
-                st.success("Account Created Successfully! Redirecting...")
-                # Assuming 'navigate' is a function passed to switch pages
+                st.success("Account Created Successfully! Redirecting to login...")
+                # 3. NAVIGATE TO LOGIN
                 if navigate:
                     navigate("login")
 
             except mysql.connector.Error as err:
-                st.error(f"Database Error: {err}")
+                # Handle Duplicate Entry error (e.g., if email is unique)
+                if err.errno == 1062: # MySQL error code for Duplicate entry
+                    st.error("Registration failed: This email address is already registered.")
+                else:
+                    st.error(f"Database Error: {err}")
             except Exception as e:
                 st.error(f"Unexpected Error during signup: {e}")
 
@@ -203,15 +204,11 @@ def render(navigate):
 # ------------------ APP EXECUTION EXAMPLE ----------------
 # --------------------------------------------------------
 
-# Since the original code was a module for a multi-page app (indicated by 'render(navigate)'), 
-# we need a simple way to run it if it were the main script.
-
 if __name__ == "__main__":
-    # Set page layout to center the content
     st.set_page_config(layout="centered")
     
-    # Placeholder for the navigation function, since this file doesn't define the full app structure
+    # Placeholder for the navigation function
     def placeholder_navigate(page):
-        st.info(f"Navigation triggered: Should go to the '{page}' page now.")
+        st.info(f"Navigation complete: You would now be on the '{page}' page.")
 
     render(placeholder_navigate)
