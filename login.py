@@ -54,9 +54,8 @@ body {
     box-shadow: 0px 0px 0px 2px rgba(40, 167, 69, 0.25) !important;
 }
 
-/* MAIN LOGIN BUTTON */
-/* Target the button inside the column for the main login button */
-div[data-testid="stHorizontalBlock"] > div:nth-child(1) > div > div > button {
+/* PRIMARY LOGIN BUTTON (Ensuring full width) */
+div[data-testid="stForm"] > div > div:nth-child(4) > div > div > button { 
     background-color: #28a745 !important;
     color: white !important;
     border-radius: 8px !important;
@@ -65,45 +64,40 @@ div[data-testid="stHorizontalBlock"] > div:nth-child(1) > div > div > button {
     font-size: 18px !important;
     font-weight: 600 !important;
     transition: background-color 0.3s ease;
-    width: 100%; /* Ensure full width */
+    width: 100%;
 }
 
-div[data-testid="stHorizontalBlock"] > div:nth-child(1) > div > div > button:hover {
+div[data-testid="stForm"] > div > div:nth-child(4) > div > div > button:hover {
     background-color: #1f7a38 !important;
 }
 
 /* LINK BUTTON STYLE (for Forgot Password & Sign Up) */
-/* Target buttons in the bottom row with a different style (Link/Text style) */
+/* Targets buttons created in the bottom columns for link styling */
 .action-link-button {
-    background: none !important;
+    background-color: #28a745 !important; /* Green background */
+    color: white !important; /* White text */
     border: none !important;
-    color: #28a745 !important;
     font-weight: 600 !important;
     cursor: pointer !important;
-    padding: 0 !important;
+    padding: 10px 0 !important;
     margin: 0 !important;
     font-size: 15px !important;
-    box-shadow: none !important; /* Remove shadow */
-    width: auto !important; /* Allow auto width */
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    width: 100% !important; /* Forces equal width within the column */
 }
 
 .action-link-button:hover {
-    text-decoration: underline !important;
-    color: #1f7a38 !important;
-    background: none !important;
+    background-color: #1f7a38 !important; /* Darker green hover */
+    text-decoration: none !important;
 }
 
-/* Bottom row links container */
+/* Bottom links container adjustment */
 .bottom-links {
-    display: flex;
-    justify-content: space-around; /* Distribute links evenly */
     margin-top: 25px;
-    align-items: center;
-}
-
-/* Ensure consistent button styling for links (Hack for Streamlit buttons) */
-div[data-testid="stButton"] button {
-    transition: all 0.3s ease; /* Apply transition to all buttons */
+    display: flex;
+    justify-content: space-between;
+    gap: 10px; /* Space between the two buttons */
 }
 </style>
 """
@@ -128,87 +122,86 @@ def get_conn():
 # ------------------ LOGIN RENDER FUNCTION ----------------
 # --------------------------------------------------------
 def render(navigate):
+    # Use st.form to group components and handle input submission cleanly,
+    # which often helps with the multi-click issue for the primary button.
+    with st.container():
+        st.markdown("<div class='login-card'>", unsafe_allow_html=True)
 
-    st.markdown("<div class='login-card'>", unsafe_allow_html=True)
+        # ---------------- HEADER ----------------
+        st.markdown("""
+            <div style='text-align:center;'>
+                <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                width="70"
+                style="background-color:#28a745; border-radius:50%; padding:10px;">
+            </div>
+        """, unsafe_allow_html=True)
 
-    # ---------------- HEADER ----------------
-    st.markdown("""
-        <div style='text-align:center;'>
-            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-            width="70"
-            style="background-color:#28a745; border-radius:50%; padding:10px;">
-        </div>
-    """, unsafe_allow_html=True)
+        st.markdown("<h2 class='title-header' style='text-align:center;'>Welcome to Sales Buddy</h2>", unsafe_allow_html=True)
+        st.markdown("<p class='subtitle' style='text-align:center;'>Access your account</p>", unsafe_allow_html=True)
 
-    # --- UPDATED HEADER TEXT ---
-    st.markdown("<h2 class='title-header' style='text-align:center;'>Welcome to Sales Buddy</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='subtitle' style='text-align:center;'>Access your account</p>", unsafe_allow_html=True)
+        # Use st.form for the login logic
+        with st.form(key='login_form'):
+            # ---------------- INPUT FIELDS ----------------
+            email = st.text_input("Email", placeholder="your.email@company.com", key="email_login")
+            password = st.text_input("Password", type="password", placeholder="Enter your password", key="password_login")
 
-    # ---------------- INPUT FIELDS ----------------
-    email = st.text_input("Email", placeholder="your.email@company.com", key="email_login")
-    password = st.text_input("Password", type="password", placeholder="Enter your password", key="password_login")
+            # ---------------- REMEMBER ME ----------------
+            st.checkbox("Remember me", value=True, key="remember_me")
+            
+            # ---------------- LOGIN BUTTON ----------------
+            submitted = st.form_submit_button("Log In", use_container_width=True, key="login_button_submit")
 
-    # ---------------- REMEMBER ME ----------------
-    st.checkbox("Remember me", value=True, key="remember_me")
+            if submitted:
+                try:
+                    conn = get_conn()
+                    cur = conn.cursor(dictionary=True)
 
-    # ---------------- LOGIN BUTTON (Using a column for better control) ----------------
-    col_login_btn, = st.columns([1])
-    with col_login_btn:
-        if st.button("Log In", use_container_width=True, key="login_button"):
-            try:
-                conn = get_conn()
-                cur = conn.cursor(dictionary=True)
+                    cur.execute("SELECT * FROM users WHERE email=%s", (email,))
+                    user = cur.fetchone()
 
-                cur.execute("SELECT * FROM users WHERE email=%s", (email,))
-                user = cur.fetchone()
+                    if user and user["password"] == password:
+                        st.success("Login successful! Redirecting...")
+                        navigate("chatbot")
+                    else:
+                        st.error("Incorrect email or password")
 
-                if user and user["password"] == password:
-                    st.success("Login successful! Redirecting...")
-                    # --- STABLE NAVIGATION ---
-                    navigate("chatbot") 
-                else:
-                    st.error("Incorrect email or password")
+                    conn.close()
 
-                conn.close()
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-    # ---------------- FORGOT + SIGNUP (CENTERED, SAME LINE) ----------------
-    # Use columns to align the text in the middle and place buttons side-by-side
-    st.markdown("<div class='bottom-links'>", unsafe_allow_html=True)
-
-    # Forgot Password Link/Button
-    if st.button("Forgot Password?", key="fp-btn-stable"):
-        # --- STABLE NAVIGATION ---
-        navigate("forgot_password")
+        # ---------------- FORGOT + SIGNUP (SAME LINE, SAME WIDTH, GREEN BUTTONS) ----------------
+        st.markdown("<div class='bottom-links'>", unsafe_allow_html=True)
         
-    # Sign Up Link/Button
-    if st.button("Sign Up", key="su-btn-stable"):
-        # --- STABLE NAVIGATION ---
-        navigate("signup")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- CSS Styling Application Hack (Targets the two new buttons) ---
-    # We apply the action-link-button style to the two buttons placed in the bottom-links container
-    st.markdown("""
-        <script>
-        var fpBtn = window.parent.document.querySelector('[data-testid="stButton"] button[kind="secondaryFormSubmit"]:contains("Forgot Password?")');
-        var suBtn = window.parent.document.querySelector('[data-testid="stButton"] button[kind="secondaryFormSubmit"]:contains("Sign Up")');
+        # Use two equal columns (1, 1) to force same width
+        col_fp, col_su = st.columns(2)
         
-        // Find by text content if query selector fails
-        var buttons = window.parent.document.querySelectorAll('div[data-testid="stButton"] button');
-        buttons.forEach(function(button) {
-            var text = button.innerText.trim();
-            if (text === 'Forgot Password?' || text === 'Sign Up') {
-                button.classList.add('action-link-button');
-            }
-        });
-        </script>
-    """, unsafe_allow_html=True)
+        with col_fp:
+            # Forgot Password Button (Green, full width of column)
+            if st.button("Forgot Password?", key="fp-btn-stable"):
+                navigate("forgot_password")
+            
+        with col_su:
+            # Sign Up Button (Green, full width of column)
+            if st.button("Sign Up", key="su-btn-stable"):
+                navigate("signup")
+                
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # --- CSS Styling Application Hack ---
+        # Apply the 'action-link-button' style to the two buttons placed in the bottom-links container
+        st.markdown("""
+            <script>
+            var buttons = window.parent.document.querySelectorAll('div[data-testid="stButton"] button');
+            buttons.forEach(function(button) {
+                var text = button.innerText.trim();
+                // Check for exact button text to apply link styling
+                if (text === 'Forgot Password?' || text === 'Sign Up') {
+                    button.classList.add('action-link-button');
+                }
+            });
+            </script>
+        """, unsafe_allow_html=True)
 
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # The URL navigation override is no longer needed since the buttons handle navigation directly.
+        st.markdown("</div>", unsafe_allow_html=True)
