@@ -1,98 +1,108 @@
 import streamlit as st
 import mysql.connector
 
-# --- Robust Professional CSS Styles ---
-# Simplified CSS focusing on the main box, inputs, and primary button
+# --------------------------------------------------------
+# -------------------- PROFESSIONAL CSS -------------------
+# --------------------------------------------------------
 CSS = """
 <style>
-/* Global Box Styling */
-.login-box {
+
+body {
+    background-color: #f5f7fa;
+}
+
+/* LOGIN CARD */
+.login-card {
     background: #ffffff;
     width: 420px;
     padding: 40px;
     margin: auto;
-    margin-top: 50px;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    border: 1px solid #eee;
+    margin-top: 60px;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    border: 1px solid #e6e6e6;
 }
-.center { text-align:center; }
+
+/* HEADER */
 .title-header {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 700;
-    color: #333;
+    color: #222;
     margin-bottom: 5px;
 }
+
 .subtitle {
     font-size: 16px;
     color: #666;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
 }
 
-/* Input Field Styling */
+/* TEXT INPUTS */
 .stTextInput > label {
-    /* Hides default Streamlit labels */
     display: none;
 }
-.stTextInput > div > div > input {
-    border-radius: 8px;
-    border: 1px solid #dcdcdc;
-    padding: 12px 15px;
-    font-size: 16px;
-    color: #333;
-}
-.stTextInput > div > div > input:focus {
-    border-color: #28a745;
-    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
-    outline: none;
+
+.stTextInput input {
+    border-radius: 10px !important;
+    border: 1px solid #cccccc !important;
+    padding: 12px 14px !important;
+    font-size: 16px !important;
 }
 
-/* Main Log In Button - Green */
-div.stButton button {
-    background-color: #28a745; 
-    color: white;
-    border-radius: 8px;
-    font-weight: 600;
-    padding: 12px;
-    margin-top: 20px;
-    border: none;
-    box-shadow: none;
-    font-size: 18px;
-    transition: background-color 0.3s;
-}
-div.stButton button:hover {
-    background-color: #1e7e34;
+.stTextInput input:focus {
+    border-color: #28a745 !important;
+    box-shadow: 0px 0px 0px 2px rgba(40, 167, 69, 0.25) !important;
 }
 
-/* Green Link Styling for "Forgot password?" and "Sign up" */
-/* Targets any anchor tag (a) inside the login box that we generate via markdown */
-.login-box a {
+/* MAIN BUTTON */
+.stButton>button {
+    background-color: #28a745 !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    border: none !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    transition: background-color 0.3s ease;
+}
+
+.stButton>button:hover {
+    background-color: #1f7a38 !important;
+}
+
+/* LINK BUTTONS (Forgot & Signup) */
+.action-link {
+    background: none !important;
+    border: none !important;
     color: #28a745 !important;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s;
-}
-.login-box a:hover {
-    color: #1e7e34 !important;
-    text-decoration: underline;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    padding: 0 !important;
 }
 
-/* Aligning Remember Me and Forgot Password */
-div[data-testid="stHorizontalBlock"] {
-    align-items: center;
+.action-link:hover {
+    text-decoration: underline !important;
+    color: #1f7a38 !important;
 }
-div[data-testid="column"] {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+
+/* SIGNUP SECTION */
+.signup-container {
+    text-align: center;
+    margin-top: 25px;
+    font-size: 15px;
 }
+
 </style>
 """
+
 st.markdown(CSS, unsafe_allow_html=True)
 
-# --- MySQL Connection (Placeholder) ---
+
+
+# --------------------------------------------------------
+# -------------------- MYSQL CONNECTION -------------------
+# --------------------------------------------------------
 def get_conn():
-    # NOTE: Replace with your actual connection details
     return mysql.connector.connect(
         host="localhost",
         user="root",
@@ -100,82 +110,86 @@ def get_conn():
         database="smart_chatbot_db"
     )
 
-# --- Render Function ---
+
+
+# --------------------------------------------------------
+# ------------------ LOGIN RENDER FUNCTION ----------------
+# --------------------------------------------------------
 def render(navigate):
-    # Main login container
-    with st.container():
-        st.markdown("<div class='login-box'>", unsafe_allow_html=True)
-        
-        # 1. Header and Icon
-        st.markdown(
-            f"""
-            <div class='center' style='margin-bottom: 25px;'>
-                <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" 
-                     width=70 
-                     style="background-color: #28a745; border-radius: 50%; padding: 10px;">
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        st.markdown("<h2 class='center title-header'>Welcome to SalesBuddy</h2>", unsafe_allow_html=True)
-        st.markdown("<p class='center subtitle'>Sign in to your account</p>", unsafe_allow_html=True)
-        
-        # 2. Input Fields
-        email = st.text_input("Email", placeholder="your.email@company.com", key="email_input")
-        password = st.text_input("Password", type="password", placeholder="Enter your password", key="password_input")
-        
-        # 3. Remember Me and Forgot Password Row
-        col_remember, col_forgot = st.columns([1.5, 1])
-        
-        with col_remember:
-            st.checkbox("Remember me", key="remember_checkbox", value=True)
-            
-        with col_forgot:
-            # Using Markdown link for 'Forgot password?' ensures green text and click functionality
-            # Note: navigate() needs to be handled by a Streamlit session state change in a real app,
-            # but for a simple link appearance, this Markdown works best.
-            forgot_html = "<div style='text-align: right; margin-top: 10px;'>"
-            forgot_html += "<a href='#' onclick='window.parent.document.querySelector(\"[data-testid=\\\"stFileUploadDropzone\\\"], [data-testid=\\\"stFileUploader\\\"], [data-testid=\\\"stForm\\\"]).innerHTML = \"<p>Redirecting to Forgot Password...</p>\";'>Forgot password?</a>"
-            forgot_html += "</div>"
-            st.markdown(forgot_html, unsafe_allow_html=True)
 
-        # 4. Log In Button
-        if st.button("Log In", use_container_width=True, key="login_button_main"):
-            try:
-                conn = get_conn()
-                cur = conn.cursor(dictionary=True)
-                cur.execute("SELECT * FROM users WHERE email=%s", (email,))
-                user = cur.fetchone()
+    # Login Card
+    st.markdown("<div class='login-card'>", unsafe_allow_html=True)
 
-                if user and user["password"] == password: 
-                    st.success("Login Success! Redirecting...")
-                    navigate("chatbot")
-                else:
-                    st.error("Incorrect Email or Password")
+    # ---------------- HEADER ----------------
+    st.markdown("""
+        <div style='text-align:center;'>
+            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+            width="70"
+            style="background-color:#28a745; border-radius:50%; padding:10px;">
+        </div>
+    """, unsafe_allow_html=True)
 
-                conn.close()
-            except mysql.connector.Error as err:
-                st.error(f"Database error: {err}")
-            except Exception as e:
-                st.error(f"An unexpected error occurred: {e}")
+    st.markdown("<h2 class='title-header' style='text-align:center;'>SalesBuddy Login</h2>", unsafe_allow_html=True)
+    st.markdown("<p class='subtitle' style='text-align:center;'>Access your account</p>", unsafe_allow_html=True)
 
-        # 5. Sign Up Section (Forgot Password and Sign Up Next to Next - Now done cleanly)
-        st.markdown("<br>", unsafe_allow_html=True)
-        col_signup_text, col_signup_link = st.columns([1.5, 1])
-        
-        with col_signup_text:
-            st.markdown("<p style='text-align: right; color: #666; margin-top: 8px;'>Don't have an account?</p>", unsafe_allow_html=True)
-        
-        with col_signup_link:
-            # Using Markdown link for 'Sign up' ensures green text
-            signup_html = "<div style='text-align: left; margin-top: 8px;'>"
-            signup_html += "<a href='#' onclick='window.parent.document.querySelector(\"[data-testid=\\\"stFileUploadDropzone\\\"], [data-testid=\\\"stFileUploader\\\"], [data-testid=\\\"stForm\\\"]).innerHTML = \"<p>Redirecting to Sign Up...</p>\";'>Sign up</a>"
-            signup_html += "</div>"
-            st.markdown(signup_html, unsafe_allow_html=True)
+    # ---------------- INPUT FIELDS ----------------
+    email = st.text_input("Email", placeholder="your.email@company.com", key="login_email")
+    password = st.text_input("Password", type="password", placeholder="Enter your password", key="login_password")
 
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-    # URL navigation override (for actual functionality if running in multi-page app)
+    # ---------------- REMEMBER + FORGOT ROW ----------------
+    col1, col2 = st.columns([1.2, 1])
+
+    with col1:
+        st.checkbox("Remember me", value=True, key="remember_me")
+
+    with col2:
+        if st.button("Forgot password?", key="forgot_btn"):
+            navigate("forgot_password")
+
+    # ---------------- LOGIN BUTTON ----------------
+    if st.button("Log In", use_container_width=True, key="main_login_btn"):
+        try:
+            conn = get_conn()
+            cur = conn.cursor(dictionary=True)
+
+            cur.execute("SELECT * FROM users WHERE email=%s", (email,))
+            user = cur.fetchone()
+
+            if user and user["password"] == password:
+                st.success("Login successful! Redirecting...")
+                navigate("chatbot")
+            else:
+                st.error("Incorrect email or password")
+
+            conn.close()
+
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+    # ---------------- SIGNUP SECTION ----------------
+    st.markdown("<div class='signup-container'>", unsafe_allow_html=True)
+    st.markdown("Don't have an account?")
+    if st.button("Sign up", key="signup_btn_login"):
+        navigate("signup")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Apply Action-Link Styles
+    st.markdown("""
+        <script>
+        var buttons = window.parent.document.querySelectorAll('[data-testid="stButton"] button');
+        buttons.forEach(btn => {
+            if (["Forgot password?", "Sign up"].includes(btn.innerText.trim())) {
+                btn.classList.add('action-link');
+            }
+        });
+        </script>
+    """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+
+    # ---------------- URL Parameters Navigation ----------------
     params = st.query_params
     if "su" in params:
         navigate("signup")
