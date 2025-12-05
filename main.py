@@ -16,6 +16,16 @@ st.set_page_config(page_title="Sales Buddy Chatbot", page_icon="🤖", layout="c
 if "page" not in st.session_state:
     st.session_state.page = "login"
 
+# 🔑 FIX: Initialize the 'reset_email' state variable used by forgot_password.py
+# This must happen before any module that uses it is called.
+if "reset_email" not in st.session_state:
+    st.session_state.reset_email = None
+    
+# -------------------------------------------------------------------------
+# Note: You may also need to initialize other state variables used by 
+# login, signup, or chatbot (e.g., 'logged_in', 'user_id') here as well.
+# -------------------------------------------------------------------------
+
 def navigate(page):
     """
     Sets the new page state and clears the resource cache if navigating 
@@ -25,7 +35,6 @@ def navigate(page):
     # and might need a clean start (login/signup)
     if st.session_state.page in ["login", "signup"] and page not in ["login", "signup"]:
         # Clear the st.cache_resource to force re-establishment of DB connection 
-        # or secrets fetch on the next page if needed, preventing stale data/credentials.
         st.cache_resource.clear()
         
     st.session_state.page = page
