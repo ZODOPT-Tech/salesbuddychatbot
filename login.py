@@ -54,7 +54,7 @@ body {
     box-shadow: 0px 0px 0px 2px rgba(40, 167, 69, 0.25) !important;
 }
 
-/* MAIN BUTTON */
+/* MAIN LOGIN BUTTON */
 .stButton>button {
     background-color: #28a745 !important;
     color: white !important;
@@ -70,7 +70,7 @@ body {
     background-color: #1f7a38 !important;
 }
 
-/* LINK BUTTONS (Forgot & Signup) */
+/* LINK BUTTON STYLE */
 .action-link {
     background: none !important;
     border: none !important;
@@ -78,6 +78,8 @@ body {
     font-weight: 600 !important;
     cursor: pointer !important;
     padding: 0 !important;
+    margin: 0 !important;
+    font-size: 15px !important;
 }
 
 .action-link:hover {
@@ -85,11 +87,12 @@ body {
     color: #1f7a38 !important;
 }
 
-/* SIGNUP SECTION */
-.signup-container {
-    text-align: center;
+/* Bottom row links container */
+.bottom-links {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
     margin-top: 25px;
-    font-size: 15px;
 }
 
 </style>
@@ -100,7 +103,7 @@ st.markdown(CSS, unsafe_allow_html=True)
 
 
 # --------------------------------------------------------
-# -------------------- MYSQL CONNECTION -------------------
+# ------------------ MYSQL CONNECTION ---------------------
 # --------------------------------------------------------
 def get_conn():
     return mysql.connector.connect(
@@ -117,7 +120,6 @@ def get_conn():
 # --------------------------------------------------------
 def render(navigate):
 
-    # Login Card
     st.markdown("<div class='login-card'>", unsafe_allow_html=True)
 
     # ---------------- HEADER ----------------
@@ -133,21 +135,14 @@ def render(navigate):
     st.markdown("<p class='subtitle' style='text-align:center;'>Access your account</p>", unsafe_allow_html=True)
 
     # ---------------- INPUT FIELDS ----------------
-    email = st.text_input("Email", placeholder="your.email@company.com", key="login_email")
-    password = st.text_input("Password", type="password", placeholder="Enter your password", key="login_password")
+    email = st.text_input("Email", placeholder="your.email@company.com", key="email_login")
+    password = st.text_input("Password", type="password", placeholder="Enter your password", key="password_login")
 
-    # ---------------- REMEMBER + FORGOT ROW ----------------
-    col1, col2 = st.columns([1.2, 1])
-
-    with col1:
-        st.checkbox("Remember me", value=True, key="remember_me")
-
-    with col2:
-        if st.button("Forgot password?", key="forgot_btn"):
-            navigate("forgot_password")
+    # ---------------- REMEMBER ME ----------------
+    st.checkbox("Remember me", value=True, key="remember_me")
 
     # ---------------- LOGIN BUTTON ----------------
-    if st.button("Log In", use_container_width=True, key="main_login_btn"):
+    if st.button("Log In", use_container_width=True, key="login_button"):
         try:
             conn = get_conn()
             cur = conn.cursor(dictionary=True)
@@ -166,32 +161,31 @@ def render(navigate):
         except Exception as e:
             st.error(f"Error: {e}")
 
-    # ---------------- SIGNUP SECTION ----------------
-    st.markdown("<div class='signup-container'>", unsafe_allow_html=True)
-    st.markdown("Don't have an account?")
-    if st.button("Sign up", key="signup_btn_login"):
-        navigate("signup")
-    st.markdown("</div>", unsafe_allow_html=True)
+    # ---------------- FORGOT + SIGNUP (CENTERED, SAME LINE) ----------------
+    st.markdown("""
+        <div class='bottom-links'>
+            <button class='action-link' id='fp-btn'>Forgot Password?</button>
+            <button class='action-link' id='su-btn'>Sign Up</button>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Apply Action-Link Styles
+    # JS trigger for our links
     st.markdown("""
         <script>
-        var buttons = window.parent.document.querySelectorAll('[data-testid="stButton"] button');
-        buttons.forEach(btn => {
-            if (["Forgot password?", "Sign up"].includes(btn.innerText.trim())) {
-                btn.classList.add('action-link');
-            }
-        });
+        document.getElementById('fp-btn').onclick = function() {
+            window.parent.postMessage({type:'streamlit:setComponentValue', value:'fp'}, '*');
+        };
+        document.getElementById('su-btn').onclick = function() {
+            window.parent.postMessage({type:'streamlit:setComponentValue', value:'su'}, '*');
+        };
         </script>
     """, unsafe_allow_html=True)
 
+    # Handle custom triggers
+    if "streamlit:setComponentValue" in st.session_state:
+        if st.session_state["streamlit:setComponentValue"] == "fp":
+            navigate("forgot_password")
+        if st.session_state["streamlit:setComponentValue"] == "su":
+            navigate("signup")
+
     st.markdown("</div>", unsafe_allow_html=True)
-
-
-
-    # ---------------- URL Parameters Navigation ----------------
-    params = st.query_params
-    if "su" in params:
-        navigate("signup")
-    if "fp" in params:
-        navigate("forgot_password")
