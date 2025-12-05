@@ -2,7 +2,7 @@ import streamlit as st
 import mysql.connector
 import boto3
 import json
-import bcrypt # For hashing the new password (pip install bcrypt)
+import bcrypt # For hashing the new password
 
 # --------------------------------------------------------
 # -------------------- CSS (Green Theme) ------------------
@@ -89,9 +89,8 @@ def get_conn():
 # ------------------ FORGOT PASSWORD RENDER ---------------
 # --------------------------------------------------------
 
-# Initialize session state for the reset email
-if "reset_email" not in st.session_state:
-    st.session_state.reset_email = None
+# NOTE: The initialization for st.session_state.reset_email 
+# has been moved to main.py to fix the AttributeError.
 
 def render(navigate):
     
@@ -102,6 +101,7 @@ def render(navigate):
     st.markdown("</div>", unsafe_allow_html=True)
 
     # --- STEP 1: Enter Email ---
+    # Check st.session_state.reset_email (which is initialized in main.py)
     if st.session_state.reset_email is None:
         
         st.markdown("<p class='center'>Enter your email address to verify your account.</p>", unsafe_allow_html=True)
@@ -122,8 +122,9 @@ def render(navigate):
                     user = cur.fetchone()
 
                     if user:
+                        # Success: set state and re-run to move to step 2
                         st.session_state.reset_email = email
-                        st.rerun() # Move to the password reset step
+                        st.rerun() 
                     else:
                         st.error("Email not found. Please check your address.")
 
@@ -163,7 +164,7 @@ def render(navigate):
 
                         st.success("Your password has been successfully reset! Redirecting to login...")
                         
-                        # Clear the session state variable and navigate back
+                        # Clear the state variable and navigate back
                         st.session_state.reset_email = None 
                         navigate("login")
 
