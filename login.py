@@ -2,14 +2,17 @@ import streamlit as st
 import mysql.connector
 import boto3
 import json
-import bcrypt # You need to install this: pip install bcrypt
+import bcrypt # 👈 REQUIRED: pip install bcrypt
 
 # --------------------------------------------------------
 # -------------------- PROFESSIONAL CSS -------------------
 # --------------------------------------------------------
+# NOTE: Removed CSS definitions to keep this file cleaner; 
+# It's generally better to define CSS in main.py or a separate module 
+# if possible, but keeping it here for completeness if needed.
+
 CSS = """
 <style>
-
 /* Streamlit main background */
 .stApp {
     background-color: #f5f7fa; 
@@ -112,7 +115,6 @@ st.markdown(CSS, unsafe_allow_html=True)
 # --------------------------------------------------------
 # ---------------- AWS SECRETS CONFIGURATION --------------
 # --------------------------------------------------------
-# Define the SECRET_ARN statically for this module
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
 @st.cache_resource
@@ -167,8 +169,8 @@ def get_conn():
 # ------------------ LOGIN RENDER FUNCTION ----------------
 # --------------------------------------------------------
 def render(navigate):
-    st.set_page_config(layout="centered")
-    
+    """Renders the login form and handles authentication."""
+
     with st.container():
         st.markdown("<div class='login-card'>", unsafe_allow_html=True)
 
@@ -196,7 +198,6 @@ def render(navigate):
             submitted = st.form_submit_button("Log In", use_container_width=True, key="login_button_submit")
 
             if submitted:
-                # Basic input validation
                 if not email or not password:
                     st.error("Please enter both email and password.")
                 else:
@@ -210,13 +211,13 @@ def render(navigate):
                         cur.close()
 
                         if user_record:
-                            # ⚠️ SECURE: Verify the entered password against the stored hash
+                            # Verify the entered password against the stored hash
                             stored_hash = user_record["password"].encode('utf-8')
                             
                             if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
-                                st.success("Login successful! Redirecting...")
-                                # In a real app, you would set st.session_state here
-                                navigate("chatbot")
+                                st.success("Login successful! Redirecting to Chatbot...")
+                                # 🔑 SUCCESSFUL NAVIGATION TO CHATBOT PAGE 🔑
+                                navigate("chatbot") 
                             else:
                                 st.error("Incorrect email or password")
                         else:
@@ -225,7 +226,8 @@ def render(navigate):
                     except mysql.connector.Error as err:
                         st.error(f"Database Query Error: {err}")
                     except Exception as e:
-                        st.error(f"Unexpected Error during login: {e}")
+                        # This catches the Invalid salt error, among others.
+                        st.error(f"Unexpected Error during login: {e}") 
 
         # ---------------- FORGOT + SIGNUP LINKS ----------------
         st.markdown("<div class='bottom-links'>", unsafe_allow_html=True)
@@ -233,12 +235,10 @@ def render(navigate):
         col_fp, col_su = st.columns(2)
         
         with col_fp:
-            # Forgot Password Link
             if st.button("Forgot Password?", key="fp-btn-stable"):
                 navigate("forgot_password")
         
         with col_su:
-            # Sign Up Link
             if st.button("Sign Up", key="su-btn-stable"):
                 navigate("signup")
                 
@@ -250,7 +250,6 @@ def render(navigate):
             var buttons = window.parent.document.querySelectorAll('div[data-testid="stColumn"] button');
             buttons.forEach(function(button) {
                 var text = button.innerText.trim();
-                // Check for exact button text to apply link styling
                 if (text === 'Forgot Password?' || text === 'Sign Up') {
                     button.classList.add('action-link-button');
                 }
@@ -260,26 +259,3 @@ def render(navigate):
 
 
         st.markdown("</div>", unsafe_allow_html=True)
-
-
-# --------------------------------------------------------
-# ------------------ APP EXECUTION EXAMPLE ----------------
-# --------------------------------------------------------
-if __name__ == "__main__":
-    # Placeholder for the navigation function
-    def placeholder_navigate(page):
-        st.session_state.page = page
-        st.info(f"Navigation triggered: Should go to the '{page}' page now.")
-
-    if 'page' not in st.session_state:
-        st.session_state.page = "login"
-
-    # Only render the login page if needed.
-    if st.session_state.page == "login":
-        render(placeholder_navigate)
-    else:
-        # Simple placeholder for other pages
-        st.header(f"Page: {st.session_state.page.capitalize()}")
-        if st.button("Back to Login"):
-            st.session_state.page = "login"
-            st.rerun()
