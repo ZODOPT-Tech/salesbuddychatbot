@@ -22,39 +22,27 @@ REQUIRED_COLS = [
     "First Name", "Last Name", "Annual Revenue", "Lead Status"
 ]
 
-ACTION_CHIPS = [
-    "Qualification",
-    "Needs Analysis",
-    "Proposal/Price Quote",
-    "Negotiation/Review",
-    "Closed Won",
-    "Closed Lost"
-]
 
-
-# ================== STYLING =====================
-
+# ================== CSS =====================
 CSS = """
 <style>
 
-* { font-family:"Inter", sans-serif; }
+* { font-family:"Inter",sans-serif; }
 
-.stApp {
-    background:#f7f8fa;
-}
+.stApp { background:#f6f7fb; }
 
 .block-container {
     padding:0 !important;
     max-width:900px;
 }
 
-/* ======= GRADIENT HEADER ======= */
+/* ========= GRADIENT HEADER ========= */
 .gradient-header {
-    margin:20px auto 10px auto;
+    margin:20px auto 14px auto;
     width:100%;
-    background: linear-gradient(90deg, #0066ff 0%, #7b00ff 100%);
+    background:linear-gradient(90deg, #0066ff 0%, #7b00ff 100%);
     border-radius:22px;
-    padding:26px 34px;
+    padding:28px 34px;
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -67,21 +55,20 @@ CSS = """
 }
 
 .logo-text {
-    font-size:30px;
+    font-size:32px;
     font-weight:700;
 }
 
-.logo-text span:nth-child(1){ color:#ff3d0a; }
+.logo-text span:nth-child(1){ color:#ff3c0a; }
 .logo-text span:nth-child(2){ color:#00c48c; }
 
-/* ======= API Credits ======= */
 .credits-line {
     font-size:13px;
     color:#666;
-    margin-left:4px;
 }
 
-/* ======= Lead Header ======= */
+
+/* ========= LEAD SECTION ========= */
 .lead-section {
     background:white;
     border-radius:12px;
@@ -89,7 +76,6 @@ CSS = """
     display:flex;
     justify-content:space-between;
     align-items:center;
-    margin-top:12px;
     border:1px solid #eee;
 }
 
@@ -98,14 +84,14 @@ CSS = """
 .lead-avatar {
     width:44px;
     height:44px;
-    font-weight:700;
     border-radius:50%;
-    background:#8647e8;
-    color:white;
+    background:#854ce4;
     display:flex;
     align-items:center;
     justify-content:center;
+    color:white;
     font-size:20px;
+    font-weight:700;
 }
 
 .lead-name {
@@ -118,9 +104,10 @@ CSS = """
     color:#777;
 }
 
-/* ======= Chips ======= */
+
+/* ========= CHIPS ========= */
 .chip-bar {
-    margin-top:12px;
+    margin-top:14px;
     display:flex;
     gap:10px;
     overflow-x:auto;
@@ -145,13 +132,14 @@ CSS = """
     border:1px solid #8035ff;
 }
 
-/* ======= Chat ======= */
+
+/* ========= CHAT ========= */
 .chat-container {
-    padding: 18px 6px 90px 6px;
+    padding:18px 8px 90px 8px;
 }
 
 .msg-user {
-    background:#18a05c;
+    background:#16a05c;
     color:white;
     padding:10px 16px;
     border-radius:18px 18px 0 18px;
@@ -182,7 +170,8 @@ CSS = """
     margin-top:4px;
 }
 
-/* ======= Input Bar ======= */
+
+/* ========= INPUT BAR ========= */
 .input-bar {
     position:fixed;
     bottom:0;
@@ -202,7 +191,7 @@ CSS = """
 }
 
 .send-btn {
-    background:#18a05c;
+    background:#16a05c;
     color:white;
     height:42px;
     width:42px;
@@ -248,15 +237,17 @@ def ask_gemini(query, key):
     return r.text
 
 
-# ================== APP RENDER =====================
+# ================== MAIN RENDER =====================
 
-def render(user_data):
+def render(navigate, user_data, ACTION_CHIPS):
+
     st.markdown(CSS, unsafe_allow_html=True)
 
     api_key = get_secret()
     df = load_data()
     credits = get_remaining_api_credits()
 
+    # Session state
     if "chat" not in st.session_state:
         st.session_state.chat = []
 
@@ -270,18 +261,20 @@ def render(user_data):
     lead = st.session_state.lead
 
 
-    # ========= Gradient Header ==========
+    # ====== GRADIENT HEADER ======
     st.markdown(f"""
     <div class="gradient-header">
         <div class="header-title">SalesBuddy</div>
-        <div class="logo-text"><span>zod</span><span>opt</span></div>
+        <div class="logo-text">
+            <span>zod</span><span>opt</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown(f"<div class='credits-line'>Total API Credits Left: {credits:,}</div>", unsafe_allow_html=True)
 
 
-    # ========= Lead Section ==========
+    # ====== LEAD CARD ======
     st.markdown(f"""
     <div class="lead-section">
         <div class="lead-left">
@@ -296,21 +289,26 @@ def render(user_data):
     """, unsafe_allow_html=True)
 
 
-    # ========= Status Tabs ==========
+    # ====== STATUS STAGE TABS ======
     st.markdown("<div class='chip-bar'>", unsafe_allow_html=True)
+
     for chip in ACTION_CHIPS:
         active = "chip-active" if chip == lead['status'] else ""
-        if st.button(chip, key=chip):
+        if st.button(chip, key=f"chip-{chip}"):
             st.session_state.lead['status'] = chip
+
         st.markdown(
-            f"<style>[key='{chip}'] button{{padding:7px 18px;border-radius:18px;}}[key='{chip}'] button:hover{{opacity:0.85;}}</style>",
+            f"<style>[key='chip-{chip}'] button{{padding:7px 18px;border-radius:18px;}}"
+            "</style>",
             unsafe_allow_html=True
         )
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-    # ========= Chat ==========
+    # ====== CHAT AREA ======
     st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
+
     for msg in st.session_state.chat:
         if msg["role"]=="user":
             st.markdown(
@@ -321,14 +319,22 @@ def render(user_data):
                 f"<div class='msg-ai'>{msg['content']}<div class='time-ai'>{msg['timestamp']}</div></div>",
                 unsafe_allow_html=True)
 
-    # ========= Input ==========
+
+    # ====== INPUT BOX ======
     st.markdown("<div class='input-bar'>", unsafe_allow_html=True)
+
     with st.form("chat_form", clear_on_submit=True):
         col1, col2 = st.columns([10,1])
         with col1:
             query = st.text_input("", placeholder="Type a message...")
         with col2:
             send = st.form_submit_button("▶")
+
         if send and query:
-            st.session_state.chat.append({"role":"user","content":query,"timestamp":time.strftime("%I:%M %p")})
+            st.session_state.chat.append({
+                "role":"user",
+                "content":query,
+                "timestamp":time.strftime("%I:%M %p")
+            })
+
     st.markdown("</div>", unsafe_allow_html=True)
