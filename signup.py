@@ -65,33 +65,39 @@ st.markdown(CSS, unsafe_allow_html=True)
 # ---------------- AWS Secrets Manager --------------------
 # --------------------------------------------------------
 
+# NOTE: Using a static ARN as provided in the original code.
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
 def get_db_secrets():
-    """Fetch DB credentials from AWS Secrets Manager using your actual key names."""
+    """
+    Fetch DB credentials from AWS Secrets Manager.
+    
+    CORRECTED: Uses the exact uppercase keys (DB_HOST, DB_USER, etc.) 
+    as configured in the AWS Secret value.
+    """
     try:
+        # Initialize Boto3 client
         client = boto3.client("secretsmanager", region_name="ap-south-1")
         resp = client.get_secret_value(SecretId=SECRET_ARN)
+        
+        # Parse the SecretString into a dictionary
         raw = json.loads(resp["SecretString"])
 
-        # Your secret JSON looks like this:
-        # {
-        #   "host": "",
-        #   "username": "",
-        #   "password": "",
-        #   "dbname": ""
-        # }
-
+        # Map the exact keys from AWS Secret (uppercase)
         creds = {
-            "DB_HOST": raw["host"],
-            "DB_USER": raw["username"],
-            "DB_PASSWORD": raw["password"],
-            "DB_NAME": raw["dbname"]
+            "DB_HOST": raw["DB_HOST"],
+            "DB_USER": raw["DB_USER"],
+            "DB_PASSWORD": raw["DB_PASSWORD"],
+            "DB_NAME": raw["DB_NAME"]
         }
 
         return creds
 
+    except KeyError as e:
+        # Handle the specific case where an expected key is missing
+        raise RuntimeError(f"Failed to load DB secrets: Key '{e.args[0]}' not found in AWS Secret. Please check your AWS secret key names (expected: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME).")
     except Exception as e:
+        # Handle other AWS/connection exceptions
         raise RuntimeError(f"Failed to load DB secrets: {e}")
 
 
@@ -99,6 +105,8 @@ def get_db_secrets():
 # ------------------ MYSQL CONNECTION ---------------------
 # --------------------------------------------------------
 
+# Use st.cache_resource for Streamlit to efficiently manage the connection
+@st.cache_resource
 def get_conn():
     """Connect using AWS secrets (mapped correctly)."""
     creds = get_db_secrets()
@@ -114,7 +122,13 @@ def get_conn():
         return conn
 
     except mysql.connector.Error as e:
-        raise RuntimeError(f"MySQL Connection Error: {e}")
+        # Display an error if the connection fails
+        st.error(f"MySQL Connection Error: Could not connect to the database. Details: {e}")
+        st.stop()
+    except RuntimeError as e:
+        # Display an error if secrets fetching fails
+        st.error(f"Configuration Error: {e}")
+        st.stop()
 
 
 # --------------------------------------------------------
@@ -122,9 +136,16 @@ def get_conn():
 # --------------------------------------------------------
 
 def render(navigate):
+    """
+    Renders the signup form and handles user registration logic.
+    
+    NOTE: The 'navigate' function must be defined in your main app structure 
+    (e.g., using st.session_state for navigation).
+    """
 
     st.markdown("<div class='signup-box'>", unsafe_allow_html=True)
 
+    # Header and image
     st.markdown("""
         <div style='text-align:center;'>
             <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
@@ -136,7 +157,7 @@ def render(navigate):
     st.markdown("<h2 class='title-header center'>Create Your Account</h2>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle center'>Join Sales Buddy today</p>", unsafe_allow_html=True)
 
-    # Input fields  
+    # Input fields 
     full_name = st.text_input("Full Name", placeholder="Full Name")
     email = st.text_input("Email", placeholder="Email Address")
     company = st.text_input("Company", placeholder="Company Name")
@@ -152,6 +173,7 @@ def render(navigate):
             st.error("Passwords do not match!")
         else:
             try:
+                # Get cached connection
                 conn = get_conn()
                 cur = conn.cursor()
 
@@ -159,16 +181,37 @@ def render(navigate):
                     INSERT INTO users(full_name, email, company, mobile, password)
                     VALUES (%s, %s, %s, %s, %s)
                 """
+                # Note: In a real application, you should hash the password 
+                # (e.g., using bcrypt) before storing it in the database!
                 cur.execute(query, (full_name, email, company, mobile, password))
                 conn.commit()
-                conn.close()
+                cur.close()
 
                 st.success("Account Created Successfully! Redirecting...")
-                navigate("login")
+                # Assuming 'navigate' is a function passed to switch pages
+                if navigate:
+                    navigate("login")
 
             except mysql.connector.Error as err:
                 st.error(f"Database Error: {err}")
             except Exception as e:
-                st.error(f"Unexpected Error: {e}")
+                st.error(f"Unexpected Error during signup: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+# --------------------------------------------------------
+# ------------------ APP EXECUTION EXAMPLE ----------------
+# --------------------------------------------------------
+
+# Since the original code was a module for a multi-page app (indicated by 'render(navigate)'), 
+# we need a simple way to run it if it were the main script.
+
+if __name__ == "__main__":
+    # Set page layout to center the content
+    st.set_page_config(layout="centered")
+    
+    # Placeholder for the navigation function, since this file doesn't define the full app structure
+    def placeholder_navigate(page):
+        st.info(f"Navigation triggered: Should go to the '{page}' page now.")
+
+    render(placeholder_navigate)
