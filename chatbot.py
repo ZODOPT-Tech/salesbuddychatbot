@@ -27,24 +27,25 @@ REQUIRED_COLS = [
 CSS = """
 <style>
 
-* { font-family:"Inter",sans-serif; }
-
 html, body {
-    margin:0;
-    padding:0;
+    margin:0 !important;
+    padding:0 !important;
+}
+
+.appview-container, .main, body {
+    padding:0 !important;
+    margin:0 !important;
 }
 
 .stApp {
     background:#f6f7fb;
-    margin:0;
-    padding:0;
+    padding:0 !important;
+    margin:0 !important;
 }
 
-/* remove default padding */
+/* remove block container padding */
 .block-container {
     padding-top:0 !important;
-    padding-left:0 !important;
-    padding-right:0 !important;
     max-width:900px !important;
     margin:0 auto !important;
 }
@@ -57,41 +58,39 @@ html, body {
     right:0;
     max-width:900px;
     margin:auto;
-    background:linear-gradient(90deg, #0066ff 0%, #7b00ff 100%);
+    background:linear-gradient(90deg,#0066ff 0%,#7b00ff 100%);
     border-radius:0 0 26px 26px;
-    padding:30px 34px;
+    padding:32px 36px;
     display:flex;
     justify-content:space-between;
     align-items:center;
     color:white;
-    z-index:999;
+    z-index:1000;
 }
 
 .header-title {
-    font-size:36px;
+    font-size:38px;
     font-weight:800;
 }
 
 .logo-text {
-    font-size:34px;
+    font-size:36px;
     font-weight:800;
 }
-
 .logo-text span:nth-child(1){ color:#ff3c0a; }
 .logo-text span:nth-child(2){ color:#00c48c; }
 
-/* body start after header */
+/* Body starts below header */
 .page-container {
-    padding-top:140px;
-    width:100%;
+    padding-top:160px;
     max-width:900px;
     margin:auto;
 }
 
 .credits-line {
-    font-size:14px;
+    font-size:15px;
     color:#666;
-    margin-bottom:12px;
+    margin-bottom:14px;
 }
 
 
@@ -99,7 +98,7 @@ html, body {
 .lead-section {
     background:white;
     border-radius:14px;
-    padding:18px 20px;
+    padding:20px 22px;
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -108,25 +107,25 @@ html, body {
 
 .lead-left {
     display:flex;
-    gap:12px;
+    gap:14px;
     align-items:center;
 }
 
 .lead-avatar {
-    width:45px;
-    height:45px;
+    width:50px;
+    height:50px;
     border-radius:50%;
     background:#854ce4;
     display:flex;
     align-items:center;
     justify-content:center;
     color:white;
-    font-size:20px;
+    font-size:22px;
     font-weight:700;
 }
 
 .lead-name {
-    font-size:18px;
+    font-size:19px;
     font-weight:700;
 }
 
@@ -135,13 +134,14 @@ html, body {
     color:#777;
 }
 
-/* ===== Chips ===== */
+
+/* ===== Chips Force Horizontal ===== */
 .chip-bar {
-    margin-top:16px;
+    margin-top:18px;
+    white-space:nowrap;
     display:flex;
     flex-direction:row;
-    flex-wrap:nowrap;
-    gap:10px;
+    gap:12px;
     overflow-x:auto;
     scrollbar-width:none;
     padding-bottom:6px;
@@ -151,26 +151,32 @@ html, body {
     display:none;
 }
 
-.chip-btn {
-    font-size:14px;
-    padding:10px 20px;
-    background:white;
-    border-radius:20px;
-    border:1px solid #ddd;
-    cursor:pointer;
+/* streamlit button overrides */
+[data-testid="stButton"] button {
+    display:inline-flex !important;
+    align-items:center;
     white-space:nowrap;
+    padding:10px 22px !important;
+    border-radius:22px !important;
+    border:1px solid #ddd !important;
+    background:#fff !important;
+    font-size:15px !important;
 }
 
-.chip-active {
-    background:#efe5ff;
-    color:#8035ff;
-    border:1px solid #8035ff;
+[data-testid="stButton"] {
+    margin:0 !important;
+}
+
+.chip-active button {
+    background:#efe5ff !important;
+    border:1px solid #8035ff !important;
+    color:#8035ff !important;
 }
 
 
 /* ===== Chat ===== */
 .chat-container {
-    padding:18px 6px 96px 6px;
+    padding:20px 8px 100px 8px;
 }
 
 .msg-user {
@@ -193,14 +199,14 @@ html, body {
 }
 
 .time-u {
-    font-size:10px;
+    font-size:11px;
     text-align:right;
     margin-top:4px;
     opacity:0.8;
 }
 
 .time-ai {
-    font-size:10px;
+    font-size:11px;
     color:#777;
     margin-top:4px;
 }
@@ -228,14 +234,14 @@ html, body {
 .send-btn {
     background:#16a05c;
     color:white;
-    height:42px;
-    width:42px;
+    height:44px;
+    width:44px;
     border-radius:50%;
     display:flex;
     align-items:center;
     justify-content:center;
-    cursor:pointer;
     font-size:18px;
+    cursor:pointer;
 }
 
 </style>
@@ -243,7 +249,6 @@ html, body {
 
 
 # ================== HELPERS =====================
-
 def get_remaining_api_credits():
     return random.randint(2500, 5000)
 
@@ -272,7 +277,6 @@ def ask_gemini(query, key):
 
 
 # ================== MAIN RENDER =====================
-
 def render(navigate, user_data, ACTION_CHIPS):
 
     st.markdown(CSS, unsafe_allow_html=True)
@@ -295,7 +299,7 @@ def render(navigate, user_data, ACTION_CHIPS):
 
 
     # ====== HEADER ======
-    st.markdown(f"""
+    st.markdown("""
     <div class="gradient-header">
         <div class="header-title">SalesBuddy</div>
         <div class="logo-text"><span>zod</span><span>opt</span></div>
@@ -326,18 +330,19 @@ def render(navigate, user_data, ACTION_CHIPS):
     """, unsafe_allow_html=True)
 
 
-    # ====== PIPELINE CHIPS ======
+    # ====== CHIPS ======
     st.markdown("<div class='chip-bar'>", unsafe_allow_html=True)
     for chip in ACTION_CHIPS:
-        active = "chip-active" if chip == lead['status'] else ""
-        if st.button(chip, key=f"chip-{chip}"):
-            st.session_state.lead['status'] = chip
+        active_class = "chip-active" if chip == lead['status'] else ""
+        with st.container():
+            btn = st.button(chip, key=f"chip-{chip}")
+            if btn:
+                st.session_state.lead['status'] = chip
 
-        st.markdown(
-            f"<style>[key='chip-{chip}'] button{{padding:10px 20px;border-radius:20px;}}"
-            "</style>",
-            unsafe_allow_html=True
-        )
+        if active_class:
+            st.markdown(
+                f"<style>[key='chip-{chip}']{{}} [key='chip-{chip}'] button{{background:#efe5ff !important;color:#8035ff !important;border-color:#8035ff !important;}}</style>",
+                unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -355,7 +360,7 @@ def render(navigate, user_data, ACTION_CHIPS):
 
 
     # ====== INPUT BAR ======
-    st.markdown("</div>", unsafe_allow_html=True)  # close page container
+    st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<div class='input-bar'>", unsafe_allow_html=True)
 
     with st.form("chat_form", clear_on_submit=True):
