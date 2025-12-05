@@ -5,40 +5,108 @@ import json
 import bcrypt 
 
 # --------------------------------------------------------
-# -------------------- CSS (Snippet for Login) -------------------
+# -------------------- PROFESSIONAL CSS (Navy & Teal Theme) -------------------
 # --------------------------------------------------------
 CSS = """
 <style>
-/* Streamlit main background */
-.stApp { background-color: #f5f7fa; }
+/* Streamlit App Background: Very light gray/off-white */
+.stApp {
+    background-color: #f5f7fa; 
+}
+
 /* LOGIN CARD */
 .login-card {
-    background: #ffffff; width: 420px; padding: 40px; margin: auto;
-    margin-top: 60px; border-radius: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    background: #ffffff;
+    width: 420px;
+    padding: 40px;
+    margin: auto;
+    margin-top: 60px;
+    border-radius: 18px;
+    box-shadow: 0 10px 40px rgba(44, 62, 80, 0.1); /* Deeper shadow for depth */
     border: 1px solid #e6e6e6;
 }
-.title-header { font-size: 30px; font-weight: 700; color: #222; margin-bottom: 5px; }
-.subtitle { font-size: 16px; color: #666; margin-bottom: 25px; }
-/* Text Inputs */
-.stTextInput > label { display: none; }
-.stTextInput input { border-radius: 10px !important; border: 1px solid #cccccc !important; padding: 12px 14px !important; font-size: 16px !important; }
-.stTextInput input:focus { border-color: #28a745 !important; box-shadow: 0px 0px 0px 2px rgba(40, 167, 69, 0.25) !important; }
-/* Primary Button */
+
+/* HEADER AND TEXT */
+.title-header {
+    font-size: 30px;
+    font-weight: 700;
+    color: #2c3e50; /* Deep Navy Blue */
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: #7f8c8d; /* Muted Gray */
+    margin-bottom: 30px;
+}
+
+/* TEXT INPUTS */
+.stTextInput > label {
+    display: none;
+}
+
+.stTextInput input {
+    border-radius: 10px !important;
+    border: 1px solid #bdc3c7 !important; /* Lighter border */
+    padding: 12px 14px !important;
+    font-size: 16px !important;
+    color: #2c3e50;
+}
+
+.stTextInput input:focus {
+    border-color: #1abc9c !important; /* Teal focus color */
+    box-shadow: 0px 0px 0px 2px rgba(26, 188, 156, 0.3) !important; 
+}
+
+/* PRIMARY LOGIN BUTTON */
 div[data-testid="stForm"] > div > div:nth-child(4) > div > div > button { 
-    background-color: #28a745 !important; color: white !important; border-radius: 8px !important;
-    padding: 12px !important; border: none !important; font-size: 18px !important;
-    font-weight: 600 !important; width: 100%;
+    background-color: #34495e !important; /* Primary Navy Button */
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    border: none !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    transition: background-color 0.3s ease;
+    width: 100%;
 }
-/* Bottom links */
-.bottom-links { margin-top: 25px; display: flex; justify-content: space-between; gap: 10px; }
-.action-link-button { 
-    background-color: transparent !important; color: #28a745 !important; border: none !important;
-    font-weight: 600 !important; cursor: pointer !important; padding: 10px 0 !important; 
-    font-size: 15px !important; text-align: center; width: 100% !important;
+
+div[data-testid="stForm"] > div > div:nth-child(4) > div > div > button:hover {
+    background-color: #2c3e50 !important; /* Darker Navy on hover */
 }
-.action-link-button:hover { text-decoration: underline !important; background-color: transparent !important; }
+
+/* Bottom links container adjustment */
+.bottom-links {
+    margin-top: 25px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px; 
+}
+
+/* Link Button Styling (Forgot Password & Sign Up) */
+.action-link-button {
+    background-color: transparent !important; 
+    color: #1abc9c !important; /* Teal link color */
+    border: none !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    padding: 10px 0 !important;
+    margin: 0 !important;
+    font-size: 15px !important;
+    border-radius: 0px !important; 
+    box-shadow: none !important;
+    text-align: center;
+    width: 100% !important;
+}
+
+.action-link-button:hover {
+    text-decoration: underline !important;
+    color: #16a085 !important; /* Slightly darker teal on hover */
+    background-color: transparent !important;
+}
 </style>
 """
+
 st.markdown(CSS, unsafe_allow_html=True)
 
 
@@ -91,9 +159,9 @@ def render(navigate):
         st.markdown("""
             <div style='text-align:center;'>
                 <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                width="70" style="background-color:#28a745; border-radius:50%; padding:10px;">
+                width="70" style="background-color:#1abc9c; border-radius:50%; padding:10px;">
             </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True) # Icon background changed to Teal
 
         st.markdown("<h2 class='title-header' style='text-align:center;'>Welcome to Sales Buddy</h2>", unsafe_allow_html=True)
         st.markdown("<p class='subtitle' style='text-align:center;'>Access your account</p>", unsafe_allow_html=True)
@@ -111,7 +179,6 @@ def render(navigate):
                 else:
                     try:
                         conn = get_conn()
-                        # Fetch all necessary data for session, using user_id as PK
                         cur = conn.cursor(dictionary=True) 
                         cur.execute("SELECT user_id, full_name, email, company, password FROM users WHERE email=%s", (email,))
                         user_record = cur.fetchone()
@@ -122,7 +189,7 @@ def render(navigate):
                             
                             if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
                                 
-                                # 🔑 Set Session State for Login 
+                                # Set Session State for Login 
                                 st.session_state.logged_in = True
                                 st.session_state.user_data = {
                                     "user_id": user_record["user_id"],
@@ -146,6 +213,7 @@ def render(navigate):
         col_fp, col_su = st.columns(2)
         
         with col_fp:
+            # Added unique keys to buttons to avoid Streamlit warning
             if st.button("Forgot Password?", key="fp-btn-stable"):
                 navigate("forgot_password")
         
@@ -155,7 +223,7 @@ def render(navigate):
                 
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # --- CSS Styling Application Hack ---
+        # --- CSS Styling Application Hack (Kept for consistent styling) ---
         st.markdown("""
             <script>
             var buttons = window.parent.document.querySelectorAll('div[data-testid="stColumn"] button');
