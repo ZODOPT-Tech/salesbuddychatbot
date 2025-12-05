@@ -2,7 +2,7 @@ import streamlit as st
 import mysql.connector
 import boto3
 import json
-import bcrypt # For hashing the new password
+import bcrypt 
 
 # --------------------------------------------------------
 # -------------------- CSS (Green Theme) ------------------
@@ -47,7 +47,7 @@ div.stButton button {
 st.markdown(CSS, unsafe_allow_html=True)
 
 # --------------------------------------------------------
-# ---------------- AWS Secrets Manager --------------------
+# ---------------- AWS Secrets Manager (Shared) --------------------
 # --------------------------------------------------------
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
@@ -67,9 +67,6 @@ def get_db_secrets():
         st.stop()
 
 
-# --------------------------------------------------------
-# ------------------ MYSQL CONNECTION ---------------------
-# --------------------------------------------------------
 @st.cache_resource
 def get_conn():
     """Connect to MySQL using AWS secrets."""
@@ -89,9 +86,6 @@ def get_conn():
 # ------------------ FORGOT PASSWORD RENDER ---------------
 # --------------------------------------------------------
 
-# NOTE: The initialization for st.session_state.reset_email 
-# has been moved to main.py to fix the AttributeError.
-
 def render(navigate):
     
     st.markdown("<div class='forgot-box'>", unsafe_allow_html=True)
@@ -101,7 +95,6 @@ def render(navigate):
     st.markdown("</div>", unsafe_allow_html=True)
 
     # --- STEP 1: Enter Email ---
-    # Check st.session_state.reset_email (which is initialized in main.py)
     if st.session_state.reset_email is None:
         
         st.markdown("<p class='center'>Enter your email address to verify your account.</p>", unsafe_allow_html=True)
@@ -118,7 +111,9 @@ def render(navigate):
                 try:
                     conn = get_conn()
                     cur = conn.cursor()
-                    cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+                    
+                    # Corrected column name: user_id
+                    cur.execute("SELECT user_id FROM users WHERE email=%s", (email,))
                     user = cur.fetchone()
 
                     if user:
@@ -156,7 +151,7 @@ def render(navigate):
                         conn = get_conn()
                         cur = conn.cursor()
                         
-                        # Update the user's password using the stored email
+                        # Update the user's password
                         update_query = "UPDATE users SET password = %s WHERE email = %s"
                         cur.execute(update_query, (hashed_password_str, st.session_state.reset_email))
                         conn.commit()
