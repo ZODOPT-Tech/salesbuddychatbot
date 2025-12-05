@@ -55,7 +55,8 @@ body {
 }
 
 /* MAIN LOGIN BUTTON */
-.stButton>button {
+/* Target the button inside the column for the main login button */
+div[data-testid="stHorizontalBlock"] > div:nth-child(1) > div > div > button {
     background-color: #28a745 !important;
     color: white !important;
     border-radius: 8px !important;
@@ -64,14 +65,16 @@ body {
     font-size: 18px !important;
     font-weight: 600 !important;
     transition: background-color 0.3s ease;
+    width: 100%; /* Ensure full width */
 }
 
-.stButton>button:hover {
+div[data-testid="stHorizontalBlock"] > div:nth-child(1) > div > div > button:hover {
     background-color: #1f7a38 !important;
 }
 
-/* LINK BUTTON STYLE */
-.action-link {
+/* LINK BUTTON STYLE (for Forgot Password & Sign Up) */
+/* Target buttons in the bottom row with a different style (Link/Text style) */
+.action-link-button {
     background: none !important;
     border: none !important;
     color: #28a745 !important;
@@ -80,39 +83,45 @@ body {
     padding: 0 !important;
     margin: 0 !important;
     font-size: 15px !important;
+    box-shadow: none !important; /* Remove shadow */
+    width: auto !important; /* Allow auto width */
 }
 
-.action-link:hover {
+.action-link-button:hover {
     text-decoration: underline !important;
     color: #1f7a38 !important;
+    background: none !important;
 }
 
 /* Bottom row links container */
 .bottom-links {
     display: flex;
-    justify-content: center;
-    gap: 25px;
+    justify-content: space-around; /* Distribute links evenly */
     margin-top: 25px;
+    align-items: center;
 }
 
+/* Ensure consistent button styling for links (Hack for Streamlit buttons) */
+div[data-testid="stButton"] button {
+    transition: all 0.3s ease; /* Apply transition to all buttons */
+}
 </style>
 """
 
 st.markdown(CSS, unsafe_allow_html=True)
 
 
-
 # --------------------------------------------------------
 # ------------------ MYSQL CONNECTION ---------------------
 # --------------------------------------------------------
 def get_conn():
+    # NOTE: Replace with your actual connection details
     return mysql.connector.connect(
         host="localhost",
         user="root",
         password="yourpwd",
         database="smart_chatbot_db"
     )
-
 
 
 # --------------------------------------------------------
@@ -131,7 +140,8 @@ def render(navigate):
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<h2 class='title-header' style='text-align:center;'>SalesBuddy Login</h2>", unsafe_allow_html=True)
+    # --- UPDATED HEADER TEXT ---
+    st.markdown("<h2 class='title-header' style='text-align:center;'>Welcome to Sales Buddy</h2>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle' style='text-align:center;'>Access your account</p>", unsafe_allow_html=True)
 
     # ---------------- INPUT FIELDS ----------------
@@ -141,51 +151,64 @@ def render(navigate):
     # ---------------- REMEMBER ME ----------------
     st.checkbox("Remember me", value=True, key="remember_me")
 
-    # ---------------- LOGIN BUTTON ----------------
-    if st.button("Log In", use_container_width=True, key="login_button"):
-        try:
-            conn = get_conn()
-            cur = conn.cursor(dictionary=True)
+    # ---------------- LOGIN BUTTON (Using a column for better control) ----------------
+    col_login_btn, = st.columns([1])
+    with col_login_btn:
+        if st.button("Log In", use_container_width=True, key="login_button"):
+            try:
+                conn = get_conn()
+                cur = conn.cursor(dictionary=True)
 
-            cur.execute("SELECT * FROM users WHERE email=%s", (email,))
-            user = cur.fetchone()
+                cur.execute("SELECT * FROM users WHERE email=%s", (email,))
+                user = cur.fetchone()
 
-            if user and user["password"] == password:
-                st.success("Login successful! Redirecting...")
-                navigate("chatbot")
-            else:
-                st.error("Incorrect email or password")
+                if user and user["password"] == password:
+                    st.success("Login successful! Redirecting...")
+                    # --- STABLE NAVIGATION ---
+                    navigate("chatbot") 
+                else:
+                    st.error("Incorrect email or password")
 
-            conn.close()
+                conn.close()
 
-        except Exception as e:
-            st.error(f"Error: {e}")
+            except Exception as e:
+                st.error(f"Error: {e}")
 
     # ---------------- FORGOT + SIGNUP (CENTERED, SAME LINE) ----------------
-    st.markdown("""
-        <div class='bottom-links'>
-            <button class='action-link' id='fp-btn'>Forgot Password?</button>
-            <button class='action-link' id='su-btn'>Sign Up</button>
-        </div>
-    """, unsafe_allow_html=True)
+    # Use columns to align the text in the middle and place buttons side-by-side
+    st.markdown("<div class='bottom-links'>", unsafe_allow_html=True)
 
-    # JS trigger for our links
+    # Forgot Password Link/Button
+    if st.button("Forgot Password?", key="fp-btn-stable"):
+        # --- STABLE NAVIGATION ---
+        navigate("forgot_password")
+        
+    # Sign Up Link/Button
+    if st.button("Sign Up", key="su-btn-stable"):
+        # --- STABLE NAVIGATION ---
+        navigate("signup")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- CSS Styling Application Hack (Targets the two new buttons) ---
+    # We apply the action-link-button style to the two buttons placed in the bottom-links container
     st.markdown("""
         <script>
-        document.getElementById('fp-btn').onclick = function() {
-            window.parent.postMessage({type:'streamlit:setComponentValue', value:'fp'}, '*');
-        };
-        document.getElementById('su-btn').onclick = function() {
-            window.parent.postMessage({type:'streamlit:setComponentValue', value:'su'}, '*');
-        };
+        var fpBtn = window.parent.document.querySelector('[data-testid="stButton"] button[kind="secondaryFormSubmit"]:contains("Forgot Password?")');
+        var suBtn = window.parent.document.querySelector('[data-testid="stButton"] button[kind="secondaryFormSubmit"]:contains("Sign Up")');
+        
+        // Find by text content if query selector fails
+        var buttons = window.parent.document.querySelectorAll('div[data-testid="stButton"] button');
+        buttons.forEach(function(button) {
+            var text = button.innerText.trim();
+            if (text === 'Forgot Password?' || text === 'Sign Up') {
+                button.classList.add('action-link-button');
+            }
+        });
         </script>
     """, unsafe_allow_html=True)
 
-    # Handle custom triggers
-    if "streamlit:setComponentValue" in st.session_state:
-        if st.session_state["streamlit:setComponentValue"] == "fp":
-            navigate("forgot_password")
-        if st.session_state["streamlit:setComponentValue"] == "su":
-            navigate("signup")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+    # The URL navigation override is no longer needed since the buttons handle navigation directly.
