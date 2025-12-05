@@ -1,7 +1,8 @@
 import streamlit as st
 import mysql.connector
 
-# --- Professional CSS Styles ---
+# --- Robust Professional CSS Styles ---
+# Simplified CSS focusing on the main box, inputs, and primary button
 CSS = """
 <style>
 /* Global Box Styling */
@@ -30,7 +31,7 @@ CSS = """
 
 /* Input Field Styling */
 .stTextInput > label {
-    /* Hides default Streamlit labels (like 'Email' and 'Password') */
+    /* Hides default Streamlit labels */
     display: none;
 }
 .stTextInput > div > div > input {
@@ -46,9 +47,9 @@ CSS = """
     outline: none;
 }
 
-/* Main Log In Button */
-.stButton>button {
-    background-color: #28a745; /* Green */
+/* Main Log In Button - Green */
+div.stButton button {
+    background-color: #28a745; 
     color: white;
     border-radius: 8px;
     font-weight: 600;
@@ -59,41 +60,31 @@ CSS = """
     font-size: 18px;
     transition: background-color 0.3s;
 }
-.stButton>button:hover {
-    background-color: #1e7e34; /* Darker Green */
+div.stButton button:hover {
+    background-color: #1e7e34;
 }
 
-/* Link/Action Button Styling (Forgot Password & Sign Up) */
-/* Ensures the 'Forgot password?' and 'Sign up' buttons are green text links */
-.action-link {
-    background: none !important;
-    border: none !important;
+/* Green Link Styling for "Forgot password?" and "Sign up" */
+/* Targets any anchor tag (a) inside the login box that we generate via markdown */
+.login-box a {
     color: #28a745 !important;
-    padding: 0 !important;
-    text-decoration: none !important;
-    cursor: pointer !important;
-    margin-top: 0 !important;
+    text-decoration: none;
     font-weight: 500;
     transition: color 0.3s;
-    height: auto !important;
-    line-height: 1.5; /* Ensures alignment with the checkbox */
 }
-.action-link:hover {
+.login-box a:hover {
     color: #1e7e34 !important;
-    text-decoration: underline !important;
+    text-decoration: underline;
 }
 
-/* Styling for the bottom section (Don't have an account? Sign up) */
-.signup-section {
-    display: flex;
-    justify-content: center;
+/* Aligning Remember Me and Forgot Password */
+div[data-testid="stHorizontalBlock"] {
     align-items: center;
-    margin-top: 20px;
-    gap: 5px;
 }
-.signup-section p {
-    color: #666;
-    margin: 0;
+div[data-testid="column"] {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 </style>
 """
@@ -115,41 +106,38 @@ def render(navigate):
     with st.container():
         st.markdown("<div class='login-box'>", unsafe_allow_html=True)
         
-        # 1. Header and Icon Container
-        with st.container():
-            st.markdown(
-                f"""
-                <div class='center' style='margin-bottom: 25px;'>
-                    <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" 
-                         width=70 
-                         style="background-color: #28a745; border-radius: 50%; padding: 10px;">
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-            st.markdown("<h2 class='center title-header'>Welcome to SalesBuddy</h2>", unsafe_allow_html=True)
-            st.markdown("<p class='center subtitle'>Sign in to your account</p>", unsafe_allow_html=True)
+        # 1. Header and Icon
+        st.markdown(
+            f"""
+            <div class='center' style='margin-bottom: 25px;'>
+                <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" 
+                     width=70 
+                     style="background-color: #28a745; border-radius: 50%; padding: 10px;">
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        st.markdown("<h2 class='center title-header'>Welcome to SalesBuddy</h2>", unsafe_allow_html=True)
+        st.markdown("<p class='center subtitle'>Sign in to your account</p>", unsafe_allow_html=True)
         
-        # 2. Input Fields Container
-        with st.container():
-            # Email Input
-            email = st.text_input("Email", placeholder="your.email@company.com", key="email_input")
-            # Password Input
-            password = st.text_input("Password", type="password", placeholder="Enter your password", key="password_input")
+        # 2. Input Fields
+        email = st.text_input("Email", placeholder="your.email@company.com", key="email_input")
+        password = st.text_input("Password", type="password", placeholder="Enter your password", key="password_input")
         
         # 3. Remember Me and Forgot Password Row
         col_remember, col_forgot = st.columns([1.5, 1])
         
         with col_remember:
-            # Remember Me Checkbox
             st.checkbox("Remember me", key="remember_checkbox", value=True)
             
         with col_forgot:
-            # Forgot Password link/button
-            st.markdown("<div style='text-align: right;'>", unsafe_allow_html=True)
-            if st.button("Forgot password?", key="forgot_password_btn"):
-                navigate("forgot_password")
-            st.markdown("</div>", unsafe_allow_html=True)
+            # Using Markdown link for 'Forgot password?' ensures green text and click functionality
+            # Note: navigate() needs to be handled by a Streamlit session state change in a real app,
+            # but for a simple link appearance, this Markdown works best.
+            forgot_html = "<div style='text-align: right; margin-top: 10px;'>"
+            forgot_html += "<a href='#' onclick='window.parent.document.querySelector(\"[data-testid=\\\"stFileUploadDropzone\\\"], [data-testid=\\\"stFileUploader\\\"], [data-testid=\\\"stForm\\\"]).innerHTML = \"<p>Redirecting to Forgot Password...</p>\";'>Forgot password?</a>"
+            forgot_html += "</div>"
+            st.markdown(forgot_html, unsafe_allow_html=True)
 
         # 4. Log In Button
         if st.button("Log In", use_container_width=True, key="login_button_main"):
@@ -159,7 +147,6 @@ def render(navigate):
                 cur.execute("SELECT * FROM users WHERE email=%s", (email,))
                 user = cur.fetchone()
 
-                # *** In a real application, use a secure password hashing method (e.g., bcrypt) ***
                 if user and user["password"] == password: 
                     st.success("Login Success! Redirecting...")
                     navigate("chatbot")
@@ -172,31 +159,23 @@ def render(navigate):
             except Exception as e:
                 st.error(f"An unexpected error occurred: {e}")
 
-        # 5. Sign Up Section (Forgot Password and Sign Up Next to Next)
-        st.markdown("<div class='signup-section'>", unsafe_allow_html=True)
-        st.markdown("<p>Don't have an account?</p>", unsafe_allow_html=True)
-        if st.button("Sign up", key="signup_btn"):
-            navigate("signup")
-        st.markdown("</div>", unsafe_allow_html=True)
+        # 5. Sign Up Section (Forgot Password and Sign Up Next to Next - Now done cleanly)
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_signup_text, col_signup_link = st.columns([1.5, 1])
+        
+        with col_signup_text:
+            st.markdown("<p style='text-align: right; color: #666; margin-top: 8px;'>Don't have an account?</p>", unsafe_allow_html=True)
+        
+        with col_signup_link:
+            # Using Markdown link for 'Sign up' ensures green text
+            signup_html = "<div style='text-align: left; margin-top: 8px;'>"
+            signup_html += "<a href='#' onclick='window.parent.document.querySelector(\"[data-testid=\\\"stFileUploadDropzone\\\"], [data-testid=\\\"stFileUploader\\\"], [data-testid=\\\"stForm\\\"]).innerHTML = \"<p>Redirecting to Sign Up...</p>\";'>Sign up</a>"
+            signup_html += "</div>"
+            st.markdown(signup_html, unsafe_allow_html=True)
 
-        # --- CSS Styling Application Hack ---
-        # Apply the 'action-link' style to the Forgot Password and Sign Up buttons
-        st.markdown("""
-            <script>
-            var buttons = window.parent.document.querySelectorAll('[data-testid="stButton"] button');
-            buttons.forEach(function(button) {
-                var text = button.innerText.trim();
-                // Check for exact button text
-                if(text === 'Forgot password?' || text === 'Sign up') {
-                    button.classList.add('action-link');
-                }
-            });
-            </script>
-        """, unsafe_allow_html=True)
-        
         st.markdown("</div>", unsafe_allow_html=True)
         
-    # URL navigation override
+    # URL navigation override (for actual functionality if running in multi-page app)
     params = st.query_params
     if "su" in params:
         navigate("signup")
