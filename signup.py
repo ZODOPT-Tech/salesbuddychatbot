@@ -64,40 +64,67 @@ st.markdown(CSS, unsafe_allow_html=True)
 # --------------------------------------------------------
 # ---------------- AWS Secrets Manager --------------------
 # --------------------------------------------------------
+
+SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
+
 def get_db_secrets():
-    """Fetch DB credentials from AWS Secrets Manager"""
+    """Fetch DB credentials from AWS Secrets Manager using your actual key names."""
+    try:
+        client = boto3.client("secretsmanager", region_name="ap-south-1")
+        resp = client.get_secret_value(SecretId=SECRET_ARN)
+        raw = json.loads(resp["SecretString"])
 
-    secret_arn = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
+        # Your secret JSON looks like this:
+        # {
+        #   "host": "",
+        #   "username": "",
+        #   "password": "",
+        #   "dbname": ""
+        # }
 
-    client = boto3.client("secretsmanager", region_name="ap-south-1")
+        creds = {
+            "DB_HOST": raw["host"],
+            "DB_USER": raw["username"],
+            "DB_PASSWORD": raw["password"],
+            "DB_NAME": raw["dbname"]
+        }
 
-    response = client.get_secret_value(SecretId=secret_arn)
-    return json.loads(response["SecretString"])
+        return creds
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to load DB secrets: {e}")
 
 
 # --------------------------------------------------------
 # ------------------ MYSQL CONNECTION ---------------------
 # --------------------------------------------------------
+
 def get_conn():
-    """Connect to MySQL using secrets"""
+    """Connect using AWS secrets (mapped correctly)."""
     creds = get_db_secrets()
 
-    return mysql.connector.connect(
-        host=creds["DB_HOST"],
-        user=creds["DB_USERNAME"],
-        password=creds["DB_PASSWORD"],
-        database=creds["DB_NAME"]
-    )
+    try:
+        conn = mysql.connector.connect(
+            host=creds["DB_HOST"],
+            user=creds["DB_USER"],
+            password=creds["DB_PASSWORD"],
+            database=creds["DB_NAME"],
+            charset="utf8mb4"
+        )
+        return conn
+
+    except mysql.connector.Error as e:
+        raise RuntimeError(f"MySQL Connection Error: {e}")
 
 
 # --------------------------------------------------------
 # ------------------ SIGNUP PAGE --------------------------
 # --------------------------------------------------------
+
 def render(navigate):
 
     st.markdown("<div class='signup-box'>", unsafe_allow_html=True)
 
-    # Top Avatar
     st.markdown("""
         <div style='text-align:center;'>
             <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
@@ -117,10 +144,8 @@ def render(navigate):
     password = st.text_input("Password", type="password", placeholder="Password")
     confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm Password")
 
-    # Signup button
     if st.button("Sign Up", use_container_width=True):
 
-        # Validation
         if not all([full_name, email, company, mobile, password, confirm_password]):
             st.error("All fields are required")
         elif password != confirm_password:
