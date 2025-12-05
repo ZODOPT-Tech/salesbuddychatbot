@@ -8,6 +8,7 @@ from io import BytesIO
 import json
 import re 
 import random 
+import time # For generating timestamps
 
 # ---------------------- CONFIG & FUNCTIONS (Unchanged) --------------------------
 S3_BUCKET_NAME = "zodopt"
@@ -56,6 +57,7 @@ def load_data_from_s3(bucket_name, file_key, required_cols):
 
 def filter_data_context(df, query):
     df_working = df.copy()
+    query_lower = query.lower()
     # Simplified filtering...
     return df_working.to_csv(index=False, sep="\t")
 
@@ -64,6 +66,7 @@ def ask_gemini(question, data_context, api_key):
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(GEMINI_MODEL) 
         prompt = f"""You are ZODOPT Sales Buddy. Analyze ONLY the following tab-separated CRM lead data.
+Do not guess or hallucinate any values outside the dataset.
 --- DATASET ---
 {data_context}
 --- QUESTION ---
@@ -189,9 +192,9 @@ CHAT_CSS = """
     white-space: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
-    scrollbar-width: none; /* Hide scrollbar for Firefox */
-    -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
-    z-index: 180; /* Below headers */
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
+    z-index: 180; 
     position: fixed;
     background-color: #f0f2f6;
     width: 100%;
@@ -199,39 +202,47 @@ CHAT_CSS = """
     border-bottom: 1px solid #ddd;
 }
 .chip-bar-container::-webkit-scrollbar {
-    display: none; /* Hide scrollbar for Chrome, Safari, and Opera */
+    display: none; 
 }
 
-.chip {
+.chip-wrapper {
+    display: inline-flex;
+    padding-left: 20px; /* Start padding for chips */
+}
+
+/* Base button style for chips */
+.chip-bar-container button {
     display: inline-block;
-    padding: 8px 15px;
-    margin-right: 10px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    background-color: #ecf0f1; /* Default light chip */
-    color: #333;
-    border: 1px solid #bdc3c7;
-    transition: background-color 0.2s;
+    padding: 8px 15px !important;
+    margin-right: 10px !important;
+    border-radius: 20px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    background-color: #ecf0f1 !important; 
+    color: #333 !important;
+    border: 1px solid #bdc3c7 !important;
+    min-width: fit-content;
+    height: 38px;
 }
 
 .chip-active {
-    background-color: #e8daef !important; /* Purple active */
+    background-color: #e8daef !important; 
     color: #8e44ad !important;
     border-color: #8e44ad !important;
 }
 
 /* --- CHAT HISTORY CONTAINER --- */
 .chat-history-container {
-    padding: 200px 20px 70px 20px; /* Padding to clear fixed headers and fixed input */
+    /* Padding to clear fixed headers (approx 180px) and fixed input (approx 70px) */
+    padding: 190px 20px 70px 20px; 
     min-height: calc(100vh);
     overflow-y: auto;
 }
 
 /* --- CHAT BUBBLES --- */
 .chat-bubble-user {
-    background: #32CD32; /* User Green bubble */
+    background: #32CD32; 
     color: white;
     padding: 8px 15px;
     border-radius: 15px 15px 0px 15px;
@@ -243,7 +254,7 @@ CHAT_CSS = """
 }
 
 .chat-bubble-ai {
-    background: #ffffff; /* AI White bubble */
+    background: #ffffff; 
     color: #333;
     padding: 8px 15px;
     border-radius: 15px 15px 15px 0px;
@@ -255,11 +266,16 @@ CHAT_CSS = """
 }
 .chat-timestamp {
     font-size: 10px;
-    color: #999;
-    margin-top: -5px;
+    color: rgba(255, 255, 255, 0.7); /* Lighter color for user timestamp */
+    margin-top: 5px;
     text-align: right;
     display: block;
 }
+.chat-timestamp-ai {
+    color: #999; /* Darker color for AI timestamp */
+    text-align: left;
+}
+
 
 /* --- FIXED INPUT BAR --- */
 .fixed-input-bar {
@@ -278,16 +294,17 @@ CHAT_CSS = """
     align-items: center;
 }
 
-.stTextInput input {
+/* Remove internal Streamlit styling for chat input */
+div[data-testid="stForm"] > div > div > div > div > input {
     border: none !important;
+    box-shadow: none !important;
     padding: 10px 0 !important;
     font-size: 16px !important;
-    flex-grow: 1;
 }
 
 .send-icon {
     font-size: 28px;
-    color: #32CD32; /* Green send icon */
+    color: #32CD32; 
     cursor: pointer;
     margin-left: 10px;
 }
@@ -296,32 +313,13 @@ CHAT_CSS = """
 
 st.markdown(CHAT_CSS, unsafe_allow_html=True)
 
-# ---------------------- SESSION STATE MANAGEMENT ----------------------
-
-# Ensure st.session_state.chat exists and has data for UI to work
-if "chat" not in st.session_state:
-    st.session_state.chat = [
-        {"role": "ai", "content": "Hello! I have loaded your CRM data. What would you like to know about Acme Corporation?"},
-        {"role": "user", "content": "Sounds good!", "timestamp": "10:32 AM"}
-    ]
-    
-# Mock data for the target lead/company
-if "target_lead" not in st.session_state:
-    st.session_state.target_lead = {
-        "name": "Acme Corporation",
-        "score": "0%",
-        "status": "Qualification"
-    }
-    
-# Mock data for the action chips
-ACTION_CHIPS = ["Qualification", "Needs Analysis", "Proposal/Price Quote", "Negotiation/Review", "Closed Won"]
-
 
 # ---------------------- CHATBOT RENDER FUNCTION ----------------------
 
-def render(navigate, user_data):
+# 🔑 NOTE: The function signature is updated to accept ACTION_CHIPS
+def render(navigate, user_data, ACTION_CHIPS):
 
-    # --- 1. Load API Key and Data (Same as before) ---
+    # --- 1. Load API Key and Data ---
     gemini_api_key, secret_msg = get_secret(GEMINI_SECRET_NAME, AWS_REGION, GEMINI_SECRET_KEY)
     if gemini_api_key is None:
         st.error(secret_msg)
@@ -333,8 +331,8 @@ def render(navigate, user_data):
         st.stop()
     
     # --- 2. FIXED HEADER (Top Bar) ---
-    
-    # Place header content inside a container to control max width
+    remaining_credits = get_remaining_api_credits()
+
     with st.container():
         st.markdown(f"""
             <div class='fixed-header-top'>
@@ -348,19 +346,29 @@ def render(navigate, user_data):
                     </div>
                     <div>
                         <span class='search-icon' title='Search'>&#x1F50D;</span>
-                        <span class='logout-icon' title='Logout' onclick="window.parent.postMessage('{{type: \"streamlit:setComponentValue\", value: \"logout\"}}', '*')">
-                            &#x235F; 
-                        </span>
+                        <span class='logout-icon' id='logout_btn' title='Logout'>&#x235F;</span>
+                        <script>
+                            document.getElementById('logout_btn').onclick = function() {{
+                                // This script navigates back to login state via the session state mechanism in main.py
+                                const data = JSON.stringify({{target: 'streamlit_app', type: 'set_session_state', key: 'logged_in', value: false}});
+                                window.parent.postMessage(data, '*');
+                                const data2 = JSON.stringify({{target: 'streamlit_app', type: 'set_session_state', key: 'page', value: 'login'}});
+                                window.parent.postMessage(data2, '*');
+                            }};
+                        </script>
                     </div>
                 </div>
                 <div class='api-credits-line'>
-                    Total API Credits left **{get_remaining_api_credits():,}**
+                    Total API Credits left **{remaining_credits:,}**
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
     # --- 3. FIXED HEADER (Target Lead/Company) ---
     with st.container():
+        # Ensure target_lead exists in session state (initialized in main.py now)
+        target_lead = st.session_state.get("target_lead", {"name": "No Lead Selected", "score": "--", "status": "Qualification"})
+        
         st.markdown(f"""
             <div class='fixed-header-target'>
                 <div class='target-row'>
@@ -368,8 +376,8 @@ def render(navigate, user_data):
                         <span style='font-size:24px; color:#666; margin-right:15px; cursor:pointer;'>&#x2B05;</span>
                         <div class='target-avatar'>A</div>
                         <div>
-                            <div class='target-name'>{st.session_state.target_lead['name']}</div>
-                            <div class='target-score'>Score: {st.session_state.target_lead['score']}</div>
+                            <div class='target-name'>{target_lead['name']}</div>
+                            <div class='target-score'>Score: {target_lead['score']}</div>
                         </div>
                     </div>
                     <span style='font-size:24px; color:#666; cursor:pointer;'>&#x22EE;</span>
@@ -379,54 +387,67 @@ def render(navigate, user_data):
 
     # --- 4. FIXED ACTION CHIP BAR ---
     with st.container():
-        st.markdown("<div class='chip-bar-container'>", unsafe_allow_html=True)
-        cols = st.columns(len(ACTION_CHIPS))
+        st.markdown("<div class='chip-bar-container'><div class='chip-wrapper'>", unsafe_allow_html=True)
         
+        # Streamlit buttons are used for interactivity, CSS makes them look like chips
         for i, chip in enumerate(ACTION_CHIPS):
-            # Use a button to capture click, and hide it using CSS to show the custom chip
-            active_class = "chip-active" if chip == st.session_state.target_lead['status'] else ""
+            active_class = "chip-active" if chip == target_lead['status'] else ""
             
-            # The HTML/JS hack is complex here, so we will use a simplified approach
-            # where the button acts as the clickable element inside the container.
-            if cols[i].button(chip, key=f"chip_{i}"):
+            # Button click updates the status and triggers a query
+            if st.button(chip, key=f"chip_{i}"):
                 st.session_state.target_lead['status'] = chip
-                st.session_state.chat.append({"role": "user", "content": f"Update the lead status to '{chip}' and provide next steps."})
+                
+                # New user message for the status change
+                st.session_state.chat.append({
+                    "role": "user", 
+                    "content": f"Update the lead status to '{chip}' and provide next steps.", 
+                    "timestamp": pd.Timestamp.now().strftime("%I:%M %p")
+                })
+                
+                # Ask Gemini
+                with st.spinner(f"Analyzing required next steps for status: {chip}..."):
+                    query = f"Provide next steps for the lead {target_lead['name']} now that the status is {chip}. Reference the lead data for context."
+                    data_ctx = filter_data_context(df_filtered, query)
+                    reply = ask_gemini(query, data_ctx, gemini_api_key)
+                    st.session_state.chat.append({
+                        "role": "ai", 
+                        "content": reply, 
+                        "timestamp": pd.Timestamp.now().strftime("%I:%M %p")
+                    })
                 st.rerun()
 
-            # Apply the custom chip styling via HTML injection (Streamlit hack)
-            st.markdown(f"""
-                <script>
-                    var button = window.parent.document.querySelector('[data-testid="stButton"] button:contains("{chip}")');
-                    if (button) {{
-                        button.classList.add('chip');
-                        if ('{active_class}' === 'chip-active') {{
+            # Apply the active class using JavaScript hack after the button renders
+            if active_class:
+                st.markdown(f"""
+                    <script>
+                        var button = window.parent.document.querySelector('[data-testid="stButton"] button:contains("{chip}")');
+                        if (button) {{
                             button.classList.add('chip-active');
                         }}
-                    }}
-                </script>
-            """, unsafe_allow_html=True)
+                    </script>
+                """, unsafe_allow_html=True)
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div></div>", unsafe_allow_html=True) # Close chip-wrapper and chip-bar-container
 
     # --- 5. CHAT HISTORY DISPLAY ---
     
     # This container sits below all fixed headers
     st.markdown("<div class='chat-history-container'>", unsafe_allow_html=True)
     for msg in st.session_state.chat:
-        timestamp = msg.get("timestamp", pd.Timestamp.now().strftime("%I:%M %p"))
+        timestamp = msg.get("timestamp", time.strftime("%I:%M %p")) # Use time.strftime for simplicity
         
         if msg["role"] == "user":
             st.markdown(f"""
                 <div class='chat-bubble-user'>
                     {msg['content']}
-                    <span class='chat-timestamp' style='color:#a6e8b2; margin-top:5px; text-align:right;'>{timestamp}</span>
+                    <span class='chat-timestamp'>{timestamp}</span>
                 </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
                 <div class='chat-bubble-ai'>
                     {msg['content']}
-                    <span class='chat-timestamp' style='text-align:left;'>{timestamp}</span>
+                    <span class='chat-timestamp chat-timestamp-ai'>{timestamp}</span>
                 </div>
             """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -452,19 +473,18 @@ def render(navigate, user_data):
                 query = st.text_input("", placeholder="Type a message...", key="final_query_input", label_visibility="collapsed")
             
             with col_send:
-                # Use a submit button that acts as the send icon
                 submitted = st.form_submit_button("▶", key="send_button_icon")
 
         if submitted and query:
             # Append user message with current time
-            st.session_state.chat.append({"role": "user", "content": query, "timestamp": pd.Timestamp.now().strftime("%I:%M %p")})
+            st.session_state.chat.append({"role": "user", "content": query, "timestamp": time.strftime("%I:%M %p")})
             
             # Process the query
             with st.spinner("Analyzing data..."):
                 data_ctx = filter_data_context(df_filtered, query)
                 reply = ask_gemini(query, data_ctx, gemini_api_key)
                 # Append AI response
-                st.session_state.chat.append({"role": "ai", "content": reply, "timestamp": pd.Timestamp.now().strftime("%I:%M %p")})
+                st.session_state.chat.append({"role": "ai", "content": reply, "timestamp": time.strftime("%I:%M %p")})
             
             st.rerun()
 
@@ -485,6 +505,8 @@ def render(navigate, user_data):
                 sendButton.style.display = 'flex';
                 sendButton.style.alignItems = 'center';
                 sendButton.style.justifyContent = 'center';
+                // Adjust position to align with input field
+                sendButton.parentElement.style.marginTop = '-5px';
             }
             </script>
             """, unsafe_allow_html=True
