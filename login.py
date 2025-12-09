@@ -8,58 +8,65 @@ import mysql.connector
 
 
 # --------------------------------------------------------
-# ---------------- AWS Secrets Manager -------------------
+#  AWS Secrets Manager (Key-Value Mode)
 # --------------------------------------------------------
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
 
 @st.cache_resource
 def get_db_secrets():
-    """Fetch DB credentials from AWS Secrets Manager."""
+    """
+    Fetch DB credentials from AWS Secrets Manager.
+    Secret stored in Key-Value mode.
+    """
     try:
         client = boto3.client("secretsmanager", region_name="ap-south-1")
         resp = client.get_secret_value(SecretId=SECRET_ARN)
-        raw = json.loads(resp["SecretString"])
+        data = json.loads(resp["SecretString"])  # contains KV pairs
+
         return {
-            "DB_HOST": raw["DB_HOST"],
-            "DB_USER": raw["DB_USER"],
-            "DB_PASSWORD": raw["DB_PASSWORD"],
-            "DB_NAME": raw["DB_NAME"]
+            "host": data["DB_HOST"],
+            "user": data["DB_USER"],
+            "password": data["DB_PASSWORD"],
+            "database": data["DB_NAME"]
         }
+
     except Exception as e:
-        st.error(f"Configuration Error: Failed to load DB secrets: {e}")
+        st.error(f"Failed to load AWS DB secrets: {e}")
         st.stop()
 
 
-@st.cache_resource
 def get_conn():
-    """Connect to MySQL using AWS secrets."""
+    """Always return a fresh MySQL connection."""
     try:
         creds = get_db_secrets()
         conn = mysql.connector.connect(
-            host=creds["DB_HOST"],
-            user=creds["DB_USER"],
-            password=creds["DB_PASSWORD"],
-            database=creds["DB_NAME"],
+            host=creds["host"],
+            user=creds["user"],
+            password=creds["password"],
+            database=creds["database"],
             charset="utf8mb4"
         )
         return conn
+
     except mysql.connector.Error as e:
-        st.error(f"Database Connection Error: {e}")
-        st.stop()
+        st.error(f"MySQL Connection not available: {e}")
+        return None
 
 
 # --------------------------------------------------------
-# ---------------- AUTH LOGIC ----------------------------
+#  DB Authentication
 # --------------------------------------------------------
 def authenticate_user(email, password):
     """
-    Validate login credentials against DB.
+    Validate login from database.
     """
-    try:
-        conn = get_conn()
-        cursor = conn.cursor(dictionary=True)
+    conn = get_conn()
+    if not conn:
+        return False, None
 
+    try:
+        cursor = conn.cursor(dictionary=True)
         query = """
         SELECT full_name, email
         FROM users
@@ -74,8 +81,7 @@ def authenticate_user(email, password):
 
         if row:
             return True, row
-        else:
-            return False, None
+        return False, None
 
     except Exception as e:
         st.error(f"Login failed: {e}")
@@ -83,18 +89,19 @@ def authenticate_user(email, password):
 
 
 # --------------------------------------------------------
-# ---------------- CONSTANTS -----------------------------
+#  UI CONSTANTS
 # --------------------------------------------------------
 LOGO_URL = "https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
 PRIMARY_COLOR = "#0B2A63"
 
 
 # --------------------------------------------------------
-# ---------------- STYLES -------------------------------
+#  STYLES (Don't change)
 # --------------------------------------------------------
 def apply_styles():
     st.markdown(f"""
     <style>
+
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
     html, body, [data-testid="stAppViewContainer"] {{
@@ -102,8 +109,13 @@ def apply_styles():
         background-color: #F6F8FB;
     }}
 
+    [data-testid="stHeader"] {{
+        background: transparent;
+    }}
+
     .stTextInput label {{
         display: block !important;
+        margin-bottom: 6px !important;
         font-weight: 600 !important;
         font-size: 15px !important;
         color: #1A1F36 !important;
@@ -125,6 +137,7 @@ def apply_styles():
         font-size: 17px !important;
         font-weight: 700 !important;
         border-radius: 8px !important;
+        border: none !important;
     }}
 
     .sec-container button,
@@ -136,6 +149,7 @@ def apply_styles():
         font-size: 15px !important;
         font-weight: 600 !important;
         border-radius: 8px !important;
+        border: none !important;
     }}
 
     button:hover {{
@@ -178,7 +192,7 @@ def apply_styles():
 
 
 # --------------------------------------------------------
-# ---------------- PAGE CONTENT --------------------------
+#  PAGE CONTENT
 # --------------------------------------------------------
 def render(navigate):
     st.set_page_config(layout="wide")
@@ -196,7 +210,7 @@ def render(navigate):
             logo = Image.open(BytesIO(response.content))
             st.image(logo, width=330)
         except Exception:
-            st.error("Logo loading failed")
+            st.error("Logo failed to load")
 
         st.markdown("""
         <div class="contact">
@@ -216,9 +230,9 @@ def render(navigate):
         email = st.text_input("Email Address")
         password = st.text_input("Password", type="password")
 
+        # Primary login
         if st.button("Login"):
             success, user_data = authenticate_user(email, password)
-
             if success:
                 st.session_state.logged_in = True
                 st.session_state.user_data = user_data
@@ -226,8 +240,8 @@ def render(navigate):
             else:
                 st.error("Invalid Email or Password")
 
+        # Secondary buttons
         st.markdown("<div class='sec-container'>", unsafe_allow_html=True)
-
         col1, col2 = st.columns(2)
 
         with col1:
@@ -242,7 +256,7 @@ def render(navigate):
 
 
 # --------------------------------------------------------
-# ---------------- TESTING -------------------------------
+#  TESTING
 # --------------------------------------------------------
 if __name__ == "__main__":
     def dummy_nav(x):
