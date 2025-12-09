@@ -1,7 +1,5 @@
 import streamlit as st
 import base64
-import mysql.connector
-import bcrypt
 from PIL import Image
 import requests
 from io import BytesIO
@@ -12,62 +10,7 @@ BG_URL = "https://images.unsplash.com/photo-1503264116251-35a269479413?auto=form
 LOGO_URL = "https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
 
 
-# --------- DB config--------
-DB_HOST = st.secrets.database.DB_HOST
-DB_DATABASE = st.secrets.database.DB_DATABASE
-DB_USER = st.secrets.database.DB_USER
-DB_PASSWORD = st.secrets.database.DB_PASSWORD
-
-
-# ---------- DB ----------
-def get_db_connection():
-    try:
-        return mysql.connector.connect(
-            host=DB_HOST,
-            database=DB_DATABASE,
-            user=DB_USER,
-            password=DB_PASSWORD
-        )
-    except Exception as e:
-        st.error(f"DB error: {e}")
-        return None
-
-
-# ---------- Auth ----------
-def check_login(email, password):
-    conn = None
-    cursor = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return False
-
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT Password FROM user_registration WHERE Email_Id = %s",
-            (email,)
-        )
-        row = cursor.fetchone()
-
-        if row and row[0]:
-            hashed = row[0]
-            if isinstance(hashed, str):
-                hashed = hashed.encode("utf-8")
-            return bcrypt.checkpw(password.encode("utf-8"), hashed)
-
-        return False
-
-    except Exception as e:
-        st.error(e)
-        return False
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-# ---------- BG + CSS ----------
+# ---------- BACKGROUND + CSS ----------
 def set_background(url):
     try:
         img_bytes = requests.get(url).content
@@ -77,7 +20,7 @@ def set_background(url):
             f"""
             <style>
             [data-testid="stAppViewContainer"] {{
-                background: url("data:image/jpeg;base64,{encoded}");
+                background-image: url("data:image/jpeg;base64,{encoded}");
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -125,23 +68,15 @@ def set_background(url):
         pass
 
 
-# ---------- UI ----------
+# ------------------ UI -------------------
 def login(navigate_to):
     st.set_page_config(layout="wide")
 
-    # Query param routing
-    query = st.experimental_get_query_params()
-    if "page" in query and query["page"][0] == "forgot":
-        st.experimental_set_query_params()
-        navigate_to("forgot")
-        return
-
-    # Apply bg
     set_background(BG_URL)
 
     col_left, col_right = st.columns([1.2, 1])
 
-    # -------- LEFT PANEL --------
+    # LEFT PANEL
     with col_left:
         try:
             logo_bytes = requests.get(LOGO_URL).content
@@ -166,7 +101,7 @@ def login(navigate_to):
             unsafe_allow_html=True
         )
 
-    # -------- RIGHT PANEL --------
+    # RIGHT PANEL
     with col_right:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         st.markdown(
@@ -178,34 +113,31 @@ def login(navigate_to):
         password = st.text_input("Password", type="password")
 
         if st.button("LOGIN"):
-            if not email or not password:
-                st.error("Both fields are required!")
-            elif check_login(email, password):
-                st.session_state.user_email = email
+            st.success("Login UI working (no backend)")
+            if navigate_to:
                 navigate_to("Survey")
-            else:
-                st.error("Invalid credentials")
 
         st.markdown(
             """
             <div style="text-align:center;font-size:13px;color:#333;">
                 Forgot Password?
-                <a href="?page=forgot" style="color:#007BFF;font-weight:bold;">Click here</a>
+                <a href="#" style="color:#007BFF;font-weight:bold;">Click here</a>
             </div>
             """,
             unsafe_allow_html=True
         )
 
         if st.button("Click here to Sign Up"):
-            navigate_to("User_Registration")
+            if navigate_to:
+                navigate_to("User_Registration")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ---------- Local test -------------
+# ---------- Local testing ----------
 if __name__ == "__main__":
-    def dummy(x):
-        st.success(f"NAV → {x}")
+    def dummy(page):
+        st.success(f"NAVIGATION → {page}")
         st.stop()
 
     login(dummy)
