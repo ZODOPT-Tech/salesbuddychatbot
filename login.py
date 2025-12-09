@@ -1,66 +1,287 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
+import mysql.connector
+import bcrypt
+import boto3
+import json
 
-# --- Page Configuration (Crucial for full width) ---
-# Set the layout to 'wide' to use the maximum horizontal space.
-st.set_page_config(
-    page_title="No-Scroll Dashboard",
-    layout="wide"
-)
+st.set_page_config(page_title="Sales Buddy | Login", layout="wide")
 
-# --- Define Content Height (Estimate for No-Scroll) ---
-# We use this value to set the height of the main scrollable element (the dataframe).
-# This is often determined by trial and error based on the height of your header/footer/widgets.
-# A value of 500-600px is a common starting point for a data table on a standard laptop screen.
-DATA_HEIGHT = 550
+CSS = """
+<style>
 
-st.title("Screen-Fitting Dashboard (No Vertical Scroll)")
-st.caption(f"The main data table is limited to {DATA_HEIGHT}px to prevent vertical screen scrolling.")
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
 
-# --- Generate Sample Data ---
-@st.cache_data
-def get_data():
-    return pd.DataFrame(
-        np.random.randn(100, 4),
-        columns=['A', 'B', 'C', 'D']
-    )
+* {
+    font-family:'Poppins',sans-serif;
+    box-sizing: border-box; /* Added for better layout control */
+}
 
-df = get_data()
+.stApp > header, .stApp > footer {
+    display:none;
+}
 
-# --- Create two columns with a ratio of 3:1 ---
-col1, col2 = st.columns([3, 1])
+.stApp > main .block-container {
+    padding:0 !important;
+    margin:0 !important;
+    min-height: 100vh; /* Ensure full height */
+}
 
-# --- Wider Left Container (3/4 of screen) ---
-with col1:
-    st.header("📈 Primary Content Area")
-    st.subheader("Data View (Height-Limited)")
+/* full page */
+.page {
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+}
 
-    # The key to no-scroll is limiting the height of large elements.
-    # The dataframe will scroll internally, but the app itself won't.
-    st.dataframe(
-        df,
-        use_container_width=True,
-        height=DATA_HEIGHT # Set the height to control vertical space
-    )
+/* columns take full height */
+[data-testid="stHorizontalBlock"] {
+    height:100%;
+}
 
-# --- Narrower Right Container (1/4 of screen) ---
-with col2:
-    st.header("⚙️ Controls & Metrics")
-    st.markdown("---")
-    
-    # Use a container here if you want to apply specific styling or a sidebar feel
-    with st.container(border=True):
-        st.metric(
-            label="Total Rows",
-            value=len(df),
-            delta="Optimized"
+/* --- LEFT PANEL --- */
+.left {
+    padding:60px 80px;
+    background:white;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+
+.title {
+    font-size:52px;
+    font-weight:800;
+    margin-bottom:10px;
+}
+
+.subtitle {
+    font-size:19px;
+    color:#7c8590;
+    margin-bottom:35px;
+}
+
+/* form card wrapper (removed border/padding to match the simplified image) */
+.card {
+    width:460px;
+    background:white;
+    padding:0; 
+    border-radius:0;
+    border: none;
+}
+
+/* Styling for input fields (Light Grey background) */
+.stTextInput > div > div > input {
+    background:#eef2f6 !important;
+    border:none !important;
+    border-radius:12px !important;
+    padding:15px !important;
+}
+
+/* Removed label display to match the cleaner look */
+.stTextInput label {
+    display: none;
+}
+
+/* --- Sign In Button (Green, square corners, inside form) --- */
+form button {
+    /* Fixed to solid green background */
+    background:#20c997 !important; 
+    color:white !important;
+    border:none !important;
+    border-radius:12px !important; /* Made corners square like the fields */
+    padding:12px 0 !important;
+    font-weight:700 !important;
+    font-size:18px !important;
+    width:100% !important;
+    margin-top:20px;
+}
+
+/* --- Password Field Styling to match the Green Eye Icon/Area --- */
+
+/* 1. Make the password input element itself have a non-rounded right side */
+.stTextInput:nth-child(2) > div > div > input {
+    border-top-right-radius: 0px !important;
+    border-bottom-right-radius: 0px !important;
+    padding-right: 15px !important; /* Restore padding lost by Streamlit hack */
+}
+
+/* 2. Target the button element next to the password input (the eye icon) */
+.stTextInput:nth-child(2) > div > div > button {
+    background: #20c997 !important; /* Green background */
+    color: #ffffff !important;
+    border-radius: 12px !important;
+    border-top-left-radius: 0px !important;
+    border-bottom-left-radius: 0px !important;
+    height: 100% !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    width: 60px !important;
+}
+
+/* --- RIGHT PANEL (FULL BG) --- */
+.right {
+    height:100%;
+    padding:70px 60px;
+    background:linear-gradient(140deg,#1ccdab,#00a6d9,#008bd5);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:flex-start;
+    color:white;
+    position:relative;
+}
+
+/* decorative circles */
+.right::before {
+    content:"";
+    position:absolute;
+    width:320px;
+    height:320px;
+    top:80px;
+    right:-90px;
+    background:rgba(255,255,255,0.14);
+    border-radius:50%;
+}
+
+.right::after {
+    content:"";
+    position:absolute;
+    width:390px;
+    height:390px;
+    bottom:-120px;
+    left:-110px;
+    background:rgba(255,255,255,0.11);
+    border-radius:50%;
+}
+
+/* Right text content positioning (adjusted slightly) */
+.right-content-wrapper {
+    margin-top: -100px; /* Shift content up slightly for better balance */
+    z-index: 5;
+}
+
+.brand {
+    font-size:30px;
+    font-weight:700;
+    margin-bottom:60px;
+    z-index:5;
+}
+
+.nh {
+    font-size:46px;
+    font-weight:800;
+    margin-bottom:12px;
+    z-index:5;
+}
+
+.desc {
+    font-size:19px;
+    max-width:330px;
+    margin-bottom:35px;
+    color:#e8fbf8;
+    z-index:5;
+}
+
+/* Sign up button */
+.right .stButton > button {
+    background:white !important;
+    color:#15b7a5 !important;
+    font-weight:700 !important;
+    border-radius:35px !important;
+    padding:14px 40px !important;
+    border:none !important;
+    font-size:18px !important;
+    z-index:10;
+}
+
+</style>
+"""
+st.markdown(CSS,unsafe_allow_html=True)
+
+
+SECRET_ARN="arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
+
+@st.cache_resource
+def get_db():
+    # Placeholder/cached function for DB connection using AWS Secrets Manager
+    try:
+        client=boto3.client("secretsmanager",region_name="ap-south-1")
+        s=json.loads(client.get_secret_value(SecretId=SECRET_ARN)["SecretString"])
+        return mysql.connector.connect(
+            host=s["DB_HOST"],user=s["DB_USER"],
+            password=s["DB_PASSWORD"],database=s["DB_NAME"]
         )
-        st.slider("Data Filter Threshold", 0.0, 1.0, 0.5, step=0.01)
-        st.selectbox("Select Column", options=df.columns)
-        
-    st.markdown("---")
-    st.info("Space for small chart or brief summary.")
+    except Exception as e:
+        st.error(f"DB connection error: {e}")
+        st.stop()
 
-# Note: The main layout is designed to contain all elements above the viewport fold.
-# Avoid adding any elements *after* the columns that would push the content down.
+
+def render(navigate):
+
+    st.markdown("<div class='page'>",unsafe_allow_html=True)
+
+    col1,col2=st.columns([2.7,2],gap="small")
+
+    # LEFT PANEL (Login)
+    with col1:
+        st.markdown("<div class='left'>",unsafe_allow_html=True)
+        st.markdown("<div class='title'>Login to Your<br>Account</div>",unsafe_allow_html=True)
+        st.markdown("<div class='subtitle'>Access your account</div>",unsafe_allow_html=True)
+
+        st.markdown("<div class='card'>",unsafe_allow_html=True)
+        with st.form("login"):
+            # These inputs will inherit the light grey background style
+            email=st.text_input("",placeholder="Email")
+            # This input is styled via nth-child CSS for the green eye icon effect
+            password=st.text_input("",placeholder="Password",type="password")
+            
+            # The Sign In button is the form submit button
+            ok=st.form_submit_button("Sign In")
+            
+            if ok:
+                try:
+                    conn=get_db()
+                    cur=conn.cursor(dictionary=True)
+                    cur.execute("SELECT * FROM users WHERE email=%s",(email,))
+                    user=cur.fetchone()
+                    cur.close()
+                    
+                    if user and bcrypt.checkpw(password.encode(),user["password"].encode()):
+                        st.session_state.logged_in=True
+                        st.session_state.user_data=user
+                        navigate("chatbot")
+                    else:
+                        st.error("Incorrect email or password.")
+                except Exception:
+                    st.error("Login failed. Check server status.")
+
+        st.markdown("</div>",unsafe_allow_html=True)
+        st.markdown("</div>",unsafe_allow_html=True)
+
+    # RIGHT PANEL (Sign Up)
+    with col2:
+        st.markdown("<div class='right'>",unsafe_allow_html=True)
+        
+        # Wrapper for content to allow vertical repositioning via CSS
+        st.markdown("<div class='right-content-wrapper'>", unsafe_allow_html=True)
+        
+        st.markdown("<div class='brand'>Sales Buddy</div>",unsafe_allow_html=True)
+        st.markdown("<div class='nh'>New Here?</div>",unsafe_allow_html=True)
+        st.markdown("<div class='desc'>Sign up and discover a great amount of new opportunities!</div>",unsafe_allow_html=True)
+        
+        if st.button("Sign Up"):
+            navigate("signup")
+
+        st.markdown("</div>",unsafe_allow_html=True)
+        st.markdown("</div>",unsafe_allow_html=True)
+
+    st.markdown("</div>",unsafe_allow_html=True)
+
+
+if __name__ == "__main__":
+    # Define a simple placeholder function for the 'navigate' argument
+    def placeholder_navigate(page_name):
+        st.info(f"Navigation triggered to: **{page_name}**")
+        
+    # Run the render function
+    render(placeholder_navigate)
