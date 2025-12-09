@@ -1,146 +1,178 @@
 import streamlit as st
 import mysql.connector
+import bcrypt
 import boto3
 import json
-import bcrypt 
 
 
-# --------------------------------------------------------
-# -------------------- GLOBAL CSS ------------------------
-# --------------------------------------------------------
+# -------------------------------------------------------
+# CSS for Full UI
+# -------------------------------------------------------
 CSS = """
 <style>
 
+body, html {
+    margin: 0;
+    padding: 0;
+}
+
 .stApp {
-    background: #f4f6f9;
-}
-
-
-/* Main Card Container */
-.main-container {
-    display: flex;
-    flex-direction: row;
-    width: 900px;
-    margin: 60px auto;
     background: #ffffff;
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 18px 50px rgba(0,0,0,0.08);
-    border: 1px solid #eee;
+    font-family: "Inter", sans-serif;
 }
 
-
-/* LEFT SECTION - Login */
-.left-section {
-    width: 55%;
-    padding: 60px 45px;
+/* MAIN WRAPPER */
+.login-wrapper {
+    display: flex;
+    width: 100%;
+    height: 100vh;
 }
 
-.login-title {
-    font-size: 34px;
-    font-weight: 800;
-    color: #202936;
-    margin-bottom: 8px;
-}
-
-.login-subtitle {
-    color: #6f7b8a;
-    font-size: 17px;
-    margin-bottom: 45px;
-}
-
-
-/* RIGHT SECTION - Signup */
-.right-section {
-    width: 45%;
-    padding: 80px 40px;
-    background: linear-gradient(135deg, #0fb8ad, #1fc8db, #2cb5e8);
+/* LEFT PANEL */
+.left-panel {
+    width: 60%;
+    padding: 80px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    text-align: left;
 }
 
-.signup-title {
-    font-size: 32px;
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 60px;
+}
+
+.logo-text {
+    font-size: 26px;
+    font-weight: 700;
+    color: #34495e;
+}
+
+/* Title */
+.login-title {
+    font-size: 46px;
     font-weight: 800;
-    color: white;
-    margin-bottom: 15px;
+    color: #212b36;
+    margin-bottom: 8px;
 }
 
-.signup-text {
-    font-size: 17px;
-    color: #e8f8fa;
+.login-sub {
+    font-size: 18px;
+    color: #7f8c8d;
     margin-bottom: 35px;
-    line-height: 1.5;
 }
 
-
-/* Signup Button */
-.signup-btn {
-    background: white;
-    color: #1e8b92;
-    padding: 12px 0;
-    border-radius: 50px;
-    font-weight: 600;
-    width: 220px;
-    border: none;
-    cursor: pointer;
-    font-size: 17px;
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    margin: 30px 0px;
 }
 
-.signup-btn:hover {
-    background: #f6fefe;
+.divider-line {
+    flex: 1;
+    height: 1px;
+    background: #e0e0e0;
 }
 
+.divider-text {
+    margin: 0 15px;
+    color: #9a9ea2;
+    font-size: 14px;
+}
 
-/* Input fields */
-.stTextInput input {
-    border-radius: 10px !important;
-    border: 1px solid #ccd3dc !important;
-    padding: 12px 14px !important;
+/*** INPUTS ***/
+.stTextInput > div > div > input {
+    background: #eef3f5 !important;
+    border-radius: 12px !important;
+    border: none !important;
+    padding: 14px !important;
     font-size: 16px !important;
 }
 
-.stTextInput input:focus {
-    border-color: #1abc9c !important;
-    box-shadow: 0px 0px 0px 3px rgba(26, 188, 156, 0.25) !important;
+.stTextInput > div > div > input::placeholder {
+    color: #879199;
 }
 
-
-/* Login Button */
-.stForm button {
-    background-color: #16a085 !important;
+/*** LOGIN BUTTON ***/
+.login-btn button {
     width: 100%;
-    color: white !important;
-    font-size: 18px !important;
-    border-radius: 8px !important;
-    padding: 12px 0px !important;
+    background: linear-gradient(90deg,#32c19f,#00a0b8) !important;
     border: none !important;
+    padding: 14px 0 !important;
+    border-radius: 30px !important;
+    color: #fff !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    margin-top: 10px;
 }
 
-.stForm button:hover {
-    background-color: #118b73 !important;
-}
 
-
-/* Links Section */
-.link-row {
-    margin-top: 25px;
+/* RIGHT PANEL (SIGNUP) */
+.right-panel {
+    width: 40%;
+    background: linear-gradient(180deg, #27c2a4, #2ea6d6);
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    position: relative;
+    padding: 40px;
+    text-align: center;
 }
 
-.link-btn {
-    background: none !important;
-    color: #118b73 !important;
-    font-size: 15px !important;
+/* Abstract Shapes */
+.right-panel::before {
+    content: "";
+    position: absolute;
+    top: 10%;
+    right: 20%;
+    width: 140px;
+    height: 140px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+}
+
+.right-panel::after {
+    content: "";
+    position: absolute;
+    bottom: 12%;
+    right: 10%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+}
+
+
+.signup-title {
+    font-size: 42px;
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.signup-text {
+    font-size: 18px;
+    color: #def7f3;
+    margin-bottom: 35px;
+}
+
+/*** SIGN UP BUTTON ***/
+.signup-btn button {
+    background: white !important;
+    color: #20b8a2 !important;
+    padding: 14px 40px !important;
+    border-radius: 50px !important;
+    font-size: 18px !important;
     font-weight: 600 !important;
     border: none !important;
 }
 
-.link-btn:hover {
-    text-decoration: underline;
+.signup-btn button:hover {
+    opacity: 0.9;
 }
 
 </style>
@@ -148,118 +180,93 @@ CSS = """
 st.markdown(CSS, unsafe_allow_html=True)
 
 
-# --------------------------------------------------------
-# -------------------- AWS SECRETS -----------------------
-# --------------------------------------------------------
+
+# -------------------------------------------------------
+# AWS SECRET (KEEP YOUR ORIGINAL)
+# -------------------------------------------------------
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
+
 
 @st.cache_resource
 def get_db_secrets():
-    try:
-        client = boto3.client("secretsmanager", region_name="ap-south-1")
-        resp = client.get_secret_value(SecretId=SECRET_ARN)
-        raw = json.loads(resp["SecretString"])
-        return {
-            "DB_HOST": raw["DB_HOST"],
-            "DB_USER": raw["DB_USER"],
-            "DB_PASSWORD": raw["DB_PASSWORD"],
-            "DB_NAME": raw["DB_NAME"]
-        }
-    except Exception as e:
-        raise RuntimeError(f"Failed to load DB secrets: {e}")
+    client = boto3.client("secretsmanager", region_name="ap-south-1")
+    resp = client.get_secret_value(SecretId=SECRET_ARN)
+    raw = json.loads(resp["SecretString"])
+    return raw
 
 
 @st.cache_resource
 def get_conn():
-    try:
-        creds = get_db_secrets()
-        conn = mysql.connector.connect(
-            host=creds["DB_HOST"],
-            user=creds["DB_USER"],
-            password=creds["DB_PASSWORD"],
-            database=creds["DB_NAME"],
-            charset="utf8mb4"
-        )
-        return conn
-    except Exception as e:
-        st.error(f"Database Connection Error: {e}")
-        st.stop()
+    creds = get_db_secrets()
+    conn = mysql.connector.connect(
+        host=creds["DB_HOST"],
+        user=creds["DB_USER"],
+        password=creds["DB_PASSWORD"],
+        database=creds["DB_NAME"],
+        charset="utf8mb4"
+    )
+    return conn
 
 
-# --------------------------------------------------------
-# -------------------- LOGIN UI --------------------------
-# --------------------------------------------------------
+# -------------------------------------------------------
+# LOGIN RENDER UI
+# -------------------------------------------------------
 def render(navigate):
+    
+    st.markdown("<div class='login-wrapper'>", unsafe_allow_html=True)
 
-    st.markdown("<div class='main-container'>", unsafe_allow_html=True)
+    # ---------------- LEFT PANEL ----------------
+    st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
 
+    # Logo
+    st.markdown("""
+        <div class='logo'>
+            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" width="48">
+            <div class='logo-text'>Sales Buddy</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # ---------------- LEFT: LOGIN ----------------
-    st.markdown("<div class='left-section'>", unsafe_allow_html=True)
+    st.markdown("<div class='login-title'>Login to Your Account</div>", unsafe_allow_html=True)
+    st.markdown("<div class='login-sub'>Access your account</div>", unsafe_allow_html=True)
 
-    st.markdown("<h2 class='login-title'>Login to Your Account</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='login-subtitle'>Enter your email & password to continue</p>", unsafe_allow_html=True)
-
-    with st.form(key="login_form"):
-        email = st.text_input("Email", placeholder="you@company.com")
-        password = st.text_input("Password", type="password", placeholder="Enter your password")
+    with st.form("login_form"):
+        email = st.text_input("Email", placeholder="Email")
+        password = st.text_input("Password", type="password", placeholder="Password")
         submitted = st.form_submit_button("Sign In")
 
         if submitted:
-            if not email or not password:
-                st.error("Please enter both email and password.")
+            conn = get_conn()
+            cur = conn.cursor(dictionary=True)
+            cur.execute("SELECT user_id, full_name, email, company, password FROM users WHERE email=%s", (email,))
+            user = cur.fetchone()
+            cur.close()
+
+            if user and bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
+                st.session_state.logged_in = True
+                st.session_state.user_data = {
+                    "user_id": user["user_id"],
+                    "full_name": user["full_name"],
+                    "email": user["email"],
+                    "company": user["company"]
+                }
+                navigate("chatbot")
             else:
-                try:
-                    conn = get_conn()
-                    cur = conn.cursor(dictionary=True)
-                    cur.execute("SELECT user_id, full_name, email, company, password FROM users WHERE email=%s", (email,))
-                    user_record = cur.fetchone()
-                    cur.close()
-
-                    if user_record and bcrypt.checkpw(password.encode('utf-8'), user_record['password'].encode('utf-8')):
-                        st.session_state.logged_in = True
-                        st.session_state.user_data = {
-                            "user_id": user_record["user_id"],
-                            "full_name": user_record["full_name"],
-                            "email": user_record["email"],
-                            "company": user_record["company"]
-                        }
-                        st.success("Login successful...")
-                        navigate("chatbot")
-                    else:
-                        st.error("Incorrect email or password.")
-                except Exception as e:
-                    st.error(f"Login failed: {e}")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Forgot Password?", key="fp-btn", use_container_width=True):
-            navigate("forgot_password")
-    with c2:
-        if st.button("Sign Up", key="su-btn", use_container_width=True):
-            navigate("signup")
+                st.error("Incorrect email or password")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+    # ---------------- RIGHT PANEL ----------------
+    st.markdown("<div class='right-panel'>", unsafe_allow_html=True)
 
-    # ---------------- RIGHT: SIGNUP INFO ----------------
-    st.markdown("<div class='right-section'>", unsafe_allow_html=True)
-
-    st.markdown("<h2 class='signup-title'>New Here?</h2>", unsafe_allow_html=True)
-
+    st.markdown("<div class='signup-title'>New Here?</div>", unsafe_allow_html=True)
     st.markdown("""
-        <p class='signup-text'>
-            <b>Sales Buddy</b> is your AI-powered sales assistant,
-            built to help you manage leads, automate follow-ups,
-            track conversations, and close deals faster.
-            <br><br>
-            Discover smart analytics, deal pipeline tracking and
-            personalized recommendations to scale your sales performance.
-        </p>
+        <div class='signup-text'>
+            Sign up and discover a great amount of new opportunities!
+        </div>
     """, unsafe_allow_html=True)
 
-    if st.button("Create Your Account", key="create-btn", help="", args=None):
+    if st.button("Sign Up", key="signup", help=None, type="primary"):
         navigate("signup")
 
     st.markdown("</div>", unsafe_allow_html=True)
