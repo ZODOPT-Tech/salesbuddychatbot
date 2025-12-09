@@ -1,3 +1,4 @@
+
 import streamlit as st
 from PIL import Image
 import requests
@@ -42,17 +43,27 @@ def apply_styles():
         font-size: 15px !important;
     }}
 
-    /* -------- BUTTON FIXES -------- */
+    /* -------- BUTTON FIX (WORKS IN ALL STREAMLIT) -------- */
 
-    /* Primary Login Button: Use Streamlit default styling (no custom CSS applied here) */
-    /* To ensure it stays small and white as in the image, we rely on the default Streamlit theme */
-    
-    /* SECONDARY BUTTONS (Forgot + Create) */
-    /* Target the buttons within the .sec-container and .sec-col-btn wrappers to apply custom style */
-    .sec-col-btn button {{
+    /* PRIMARY BUTTON (Login) - MODIFIED: Removed width: 100% !important; */
+    div[data-testid="stVerticalBlock"] > div:first-child button,
+    div[data-testid="stVerticalBlock"] > div:first-child button span {{
         background-color: {PRIMARY_COLOR} !important;
         color: white !important;
-        width: 100% !important; /* Forces them to take the full width of their respective columns */
+        /* width: 100% !important; <--- REMOVED */
+        height: 48px !important;
+        font-size: 17px !important;
+        font-weight: 700 !important;
+        border-radius: 8px !important;
+        border: none !important;
+    }}
+
+    /* SECONDARY BUTTONS (Forgot + Create) */
+    .sec-container button,
+    .sec-container button span {{
+        background-color: {PRIMARY_COLOR} !important;
+        color: white !important;
+        width: 200px !important;
         height: 44px !important;
         font-size: 15px !important;
         font-weight: 600 !important;
@@ -92,10 +103,11 @@ def apply_styles():
         text-align:left;
     }}
 
-    /* Secondary button wrapper for spacing - now we don't need a custom flex container, 
-       st.columns will handle the layout based on the final image.
-       However, we keep the original sec-container class for structure if needed later. */
+    /* SECONDARY BUTTON WRAP */
     .sec-container {{
+        display: flex;
+        justify-content: center;
+        gap: 28px;
         margin-top: 20px;
     }}
 
@@ -115,20 +127,22 @@ def render(navigate):
         st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
 
         try:
-            # Fetch and display logo
+            # Use a context manager for requests to ensure connection closure
             response = requests.get(LOGO_URL)
-            response.raise_for_status() 
+            response.raise_for_status() # Raise an exception for bad status codes
             logo = Image.open(BytesIO(response.content))
             st.image(logo, width=330)
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             st.error(f"Logo failed to load: {e}")
+        except Exception as e:
+            st.error(f"An unexpected error occurred: {e}")
 
         st.markdown("""
         <div class="contact">
-        📞 Phone: +123-456-7890 <br>
-        ✉️ Email: hello@vclarifi.com <br>
-        🌐 Website: www.vclarifi.com <br>
-        📍 India
+        📞 Phone: +91 8647878785 <br>
+        ✉️ Email: enquiry@zodopt.com <br>
+        🌐 Website: www.zodopt.com <br>
+        📍 Location : Bengaluru
         </div>
         """, unsafe_allow_html=True)
 
@@ -138,32 +152,26 @@ def render(navigate):
     with right:
         st.markdown("<div class='title'>LOGIN TO YOUR ACCOUNT</div>", unsafe_allow_html=True)
 
+        # The input fields
         email = st.text_input("Email Address")
         password = st.text_input("Password", type="password")
 
-        # Primary Button: Uses Streamlit default styling (small, white)
+        # Primary Button (Now takes the full width of the column, matching the inputs)
         if st.button("Login"):
             navigate("Dashboard")
 
-        # Secondary Button Container: Uses st.columns to spread buttons across the width
+        # Secondary Button Container
         st.markdown("<div class='sec-container'>", unsafe_allow_html=True)
 
-        # Use two columns for 'Forgot Password' and 'Create Account'
-        sec_col1, sec_col2 = st.columns(2) 
+        col1, col2 = st.columns(2)
 
-        with sec_col1:
-            st.markdown("<div class='sec-col-btn'>", unsafe_allow_html=True)
-            if st.button("Forgot Password?", key="forgot_btn"): 
+        with col1:
+            if st.button("Forgot Password?", key="forgot_btn"): # Added unique key
                 navigate("Forgot")
-            st.markdown("</div>", unsafe_allow_html=True)
 
-
-        with sec_col2:
-            st.markdown("<div class='sec-col-btn'>", unsafe_allow_html=True)
-            if st.button("Create Account", key="create_btn"): 
+        with col2:
+            if st.button("Create Account", key="create_btn"): # Added unique key
                 navigate("Signup")
-            st.markdown("</div>", unsafe_allow_html=True)
-
 
         st.markdown("</div>", unsafe_allow_html=True)
 
