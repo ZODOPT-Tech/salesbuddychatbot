@@ -5,43 +5,45 @@ import boto3
 import json
 
 # --- Configuration ---
+# Set page to wide layout, essential for two-column design
 st.set_page_config(page_title="Sales Buddy | Login", layout="wide")
 
 # --- CSS Styling for the Perfect Layout ---
 CSS = """
 <style>
-@import url('https://fonts.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
 
 * {
     font-family:'Poppins',sans-serif;
     box-sizing:border-box;
 }
 
+/* Hide Streamlit default header/footer */
 .stApp > header, .stApp > footer {
     display:none;
 }
 
 /* 1. Full-Screen, No-Scroll Setup */
 .stApp > main .block-container {
-    padding:0 !important;
-    margin:0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
     max-width: 100% !important;
     min-height: 100vh;
 }
 
 .page {
-    width:100vw;
-    height:100vh;
-    overflow:hidden;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden; /* Prevent scrolling */
     display: flex;
 }
 
 [data-testid="stHorizontalBlock"] {
-    height:100%;
+    height: 100%;
     width: 100%;
 }
 
-/* --- LEFT PANEL (White Background Login Form) --- */
+/* --- LEFT PANEL (Login Form) --- */
 .left {
     padding:60px 90px;
     background:#ffffff;
@@ -120,7 +122,7 @@ CSS = """
 /* --- RIGHT PANEL (Gradient Background) --- */
 .right {
     height:100%;
-    /* Gradient color adjusted to match the visual style of the generated image */
+    /* Gradient background from the image */
     background:linear-gradient(135deg, #00A6D9 0%, #008BD5 50%, #1CCABF 100%);
     display:flex;
     flex-direction:column;
@@ -131,7 +133,7 @@ CSS = """
     overflow: hidden;
 }
 
-/* Custom element to act as the decorative gradient banner on the right side */
+/* Custom element to act as the decorative gradient banner */
 .right-banner {
     position: absolute;
     top: 100px; 
@@ -143,7 +145,7 @@ CSS = """
     z-index: 2; 
 }
 
-/* Decorative Circles (added back for a fuller gradient look) */
+/* Decorative Circles */
 .right::before {
     content:"";
     position:absolute;
@@ -166,7 +168,7 @@ CSS = """
     border-radius:50%;
 }
 
-/* Content wrapper to center and position the text */
+/* Content wrapper to position the text */
 .right-content {
     z-index: 5;
     color: #ffffff;
@@ -190,7 +192,7 @@ CSS = """
     font-size:18px;
     max-width:330px;
     margin-bottom:35px;
-    color:#e8fbf8; /* Very light color on the gradient */
+    color:#e8fbf8; 
     font-weight: 400;
 }
 
@@ -212,24 +214,30 @@ CSS = """
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
-# --- AWS Secrets and DB Connection Setup (Kept as is) ---
+# --- AWS Secrets and DB Connection Setup (Uses placeholder ARN) ---
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
 @st.cache_resource
 def get_db():
-    client = boto3.client("secretsmanager", region_name="ap-south-1")
-    s = json.loads(client.get_secret_value(SecretId=SECRET_ARN)["SecretString"])
-    return mysql.connector.connect(
-        host=s["DB_HOST"],
-        user=s["DB_USER"],
-        password=s["DB_PASSWORD"],
-        database=s["DB_NAME"],
-    )
-
+    # NOTE: This function requires valid AWS credentials and a running RDS instance.
+    # It will fail if the secret ARN is invalid or credentials are not configured.
+    try:
+        client = boto3.client("secretsmanager", region_name="ap-south-1")
+        s = json.loads(client.get_secret_value(SecretId=SECRET_ARN)["SecretString"])
+        return mysql.connector.connect(
+            host=s["DB_HOST"],
+            user=s["DB_USER"],
+            password=s["DB_PASSWORD"],
+            database=s["DB_NAME"],
+        )
+    except Exception as e:
+        # Provide a friendly error message if the connection fails
+        st.error(f"Database connection failed: Ensure AWS Secrets and Region are configured correctly.")
+        st.stop()
+        
 # --- Streamlit Rendering Function ---
 def render(navigate):
     st.markdown("<div class='page'>", unsafe_allow_html=True)
-    # Adjust column ratio slightly if needed, but [2.7, 2] is fine
     col1, col2 = st.columns([2.7, 2], gap="small")
 
     # LEFT PANEL (Login)
@@ -259,7 +267,8 @@ def render(navigate):
                     cur.execute("SELECT * FROM users WHERE email=%s", (email,))
                     user = cur.fetchone()
                     cur.close()
-                    conn.close()
+                    # conn.close() # Keep connection open if using @st.cache_resource
+                    
                     if user and bcrypt.checkpw(
                         password.encode(), user["password"].encode()
                     ):
@@ -269,7 +278,8 @@ def render(navigate):
                     else:
                         st.error("Incorrect email or password.")
                 except Exception:
-                    st.error(f"An error occurred during login.")
+                    # Generic error for the login process itself
+                    st.error("Login attempt failed. Please check your credentials.")
 
         st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
@@ -298,9 +308,21 @@ def render(navigate):
         
         # Grey "Sign Up" button
         if st.button("Sign Up"):
+            # In a real app, this would change the page state
             navigate("signup")
             
         st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+# NOTE: In a multi-page Streamlit application, you would call this function 
+# based on the navigation state. For a standalone file, you can call it directly 
+# using a placeholder `Maps` function.
+
+def placeholder_navigate(page_name):
+    # This function simulates navigation in a multi-page app environment.
+    st.info(f"Navigating to the **{page_name}** page (Simulated).")
+
+if __name__ == "__main__":
+    render(placeholder_navigate)
