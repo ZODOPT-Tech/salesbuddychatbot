@@ -3,7 +3,6 @@ from PIL import Image
 import requests
 from io import BytesIO
 
-# ---------------- CONSTANTS ----------------
 LOGO_URL = "https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
 PRIMARY_COLOR = "#0B2A63"
 
@@ -13,8 +12,8 @@ def apply_styles():
     st.markdown(f"""
     <style>
 
-    /* GLOBAL FONT */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
     html, body, [data-testid="stAppViewContainer"] {{
         font-family: "Inter", sans-serif;
         background-color: #F6F8FB;
@@ -24,104 +23,96 @@ def apply_styles():
         background: transparent;
     }}
 
-    /* INPUT LABEL FIX */
-    .stTextInput label {{
-        display: block !important;
-        margin-bottom: 6px !important;
-        font-weight: 600 !important;
-        font-size: 15px !important;
-        color: #1A1F36 !important;
-    }}
-
-    /* INPUT FIELD */
-    .stTextInput input {{
-        border-radius: 8px !important;
-        height: 46px !important;
-        border: 1px solid #CBD5E0 !important;
-        background: white !important;
-        font-size: 15px !important;
-    }}
-
-    /* -------- BUTTON FIX (WORKS IN ALL STREAMLIT) -------- */
-
-    /* PRIMARY BUTTON (Login) */
-    div[data-testid="stVerticalBlock"] > div:first-child button,
-    div[data-testid="stVerticalBlock"] > div:first-child button span {{
-        background-color: {PRIMARY_COLOR} !important;
-        color: white !important;
-        width: 100% !important;
-        height: 48px !important;
-        font-size: 17px !important;
-        font-weight: 700 !important;
-        border-radius: 8px !important;
-        border: none !important;
-    }}
-
-    /* SECONDARY BUTTONS (Forgot + Create) */
-    .sec-container button,
-    .sec-container button span {{
-        background-color: {PRIMARY_COLOR} !important;
-        color: white !important;
-        width: 200px !important;
-        height: 44px !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        border-radius: 8px !important;
-        border: none !important;
-    }}
-
-    /* Remove default hover */
-    button:hover {{
-        opacity: 0.92 !important;
-    }}
-
-    /* TITLE */
-    .title {{
-        font-size: 34px;
-        font-weight: 800;
-        margin-bottom: 32px;
-        margin-top: 80px;
-        color: {PRIMARY_COLOR};
-        text-align:left;
-    }}
-
-    /* LEFT SIDE */
     .left-panel {{
         text-align: center;
-        padding-top: 80px;
+        padding-top: 60px;
     }}
 
     .contact {{
         margin-top: 35px;
-        font-size: 16px;
+        font-size: 17px;
         font-weight: 500;
         line-height: 2.2;
-        width: 330px;
+        width: 350px;
+        text-align: left;
         margin-left: auto;
         margin-right: auto;
-        text-align:left;
     }}
 
-    /* SECONDARY BUTTON WRAP */
-    .sec-container {{
+    .title {{
+        font-size: 36px;
+        font-weight: 800;
+        margin-bottom: 38px;
+        margin-top: 70px;
+        color: {PRIMARY_COLOR};
+    }}
+
+    .stTextInput label {{
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        margin-bottom: 6px !important;
+        color: #1A1F36 !important;
+    }}
+
+    .stTextInput input {{
+        height: 50px !important;
+        border-radius: 8px !important;
+        border: 1px solid #CBD5E0 !important;
+        font-size: 16px !important;
+        padding-left: 12px !important;
+        background: white !important;
+    }}
+
+    /* LOGIN FULL WIDTH BUTTON */
+    .login-full button,
+    .login-full button span {{
+        background-color: {PRIMARY_COLOR} !important;
+        color: white !important;
+        width: 100% !important;
+        height: 55px !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        border-radius: 10px !important;
+        border: none !important;
+        margin-top: 10px !important;
+    }}
+
+    /* SIDE BY SIDE BUTTONS */
+    .btn-row {{
         display: flex;
         justify-content: center;
-        gap: 28px;
-        margin-top: 20px;
+        gap: 36px;
+        margin-top: 32px;
+    }}
+
+    .btn-row button,
+    .btn-row button span {{
+        background-color: {PRIMARY_COLOR} !important;
+        color: white !important;
+        width: 260px !important;
+        height: 52px !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        border-radius: 10px !important;
+        border: none !important;
+    }}
+
+    button:hover {{
+        opacity: 0.92 !important;
     }}
 
     </style>
     """, unsafe_allow_html=True)
 
 
-# ---------------- PAGE CONTENT ----------------
+# ---------------- UI ----------------
 def render(navigate):
     st.set_page_config(layout="wide")
     apply_styles()
 
-    left, right = st.columns([1.1, 1])
+    left, right = st.columns([1.1, 1.2])
 
-    # LEFT
+    # LEFT CONTENT
     with left:
         st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
 
@@ -133,42 +124,47 @@ def render(navigate):
 
         st.markdown("""
         <div class="contact">
-        📞 Phone: +123-456-7890 <br>
-        ✉️ Email: hello@vclarifi.com <br>
-        🌐 Website: www.vclarifi.com <br>
+        📞 Phone: +123-456-7890  
+        ✉️ Email: hello@vclarifi.com  
+        🌐 Website: www.vclarifi.com  
         📍 India
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # RIGHT
+
+    # RIGHT CONTENT
     with right:
         st.markdown("<div class='title'>LOGIN TO YOUR ACCOUNT</div>", unsafe_allow_html=True)
 
         email = st.text_input("Email Address")
         password = st.text_input("Password", type="password")
 
-        # Primary
-        if st.button("Login"):
+        # LOGIN FULL WIDTH
+        st.markdown("<div class='login-full'>", unsafe_allow_html=True)
+        if st.button("Login", key="login_main"):
             navigate("Dashboard")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<div class='sec-container'>", unsafe_allow_html=True)
+        # TWO SMALL BUTTONS
+        st.markdown("<div class='btn-row'>", unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("Forgot Password?"):
+            if st.button("Forgot Password?", key="forgot"):
                 navigate("Forgot")
 
         with col2:
-            if st.button("Create Account"):
+            if st.button("Create Account", key="signup"):
                 navigate("Signup")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ---------------- TESTING ----------------
+# TESTING
 if __name__ == "__main__":
-    def dummy_nav(x): st.success(f"Navigate → {x}")
-    render(dummy_nav)
+    def dummy(p):
+        st.success(f"→ {p}")
+    render(dummy)
