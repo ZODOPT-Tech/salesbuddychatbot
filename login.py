@@ -44,12 +44,12 @@ def apply_styles():
 
     /* -------- BUTTON FIX (WORKS IN ALL STREAMLIT) -------- */
 
-    /* PRIMARY BUTTON (Login) */
+    /* PRIMARY BUTTON (Login) - MODIFIED: Removed width: 100% !important; */
     div[data-testid="stVerticalBlock"] > div:first-child button,
     div[data-testid="stVerticalBlock"] > div:first-child button span {{
         background-color: {PRIMARY_COLOR} !important;
         color: white !important;
-        width: 100% !important;
+        /* width: 100% !important; <--- REMOVED */
         height: 48px !important;
         font-size: 17px !important;
         font-weight: 700 !important;
@@ -126,10 +126,15 @@ def render(navigate):
         st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
 
         try:
-            logo = Image.open(BytesIO(requests.get(LOGO_URL).content))
+            # Use a context manager for requests to ensure connection closure
+            response = requests.get(LOGO_URL)
+            response.raise_for_status() # Raise an exception for bad status codes
+            logo = Image.open(BytesIO(response.content))
             st.image(logo, width=330)
-        except:
-            st.write("Logo failed")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Logo failed to load: {e}")
+        except Exception as e:
+            st.error(f"An unexpected error occurred: {e}")
 
         st.markdown("""
         <div class="contact">
@@ -146,23 +151,25 @@ def render(navigate):
     with right:
         st.markdown("<div class='title'>LOGIN TO YOUR ACCOUNT</div>", unsafe_allow_html=True)
 
+        # The input fields
         email = st.text_input("Email Address")
         password = st.text_input("Password", type="password")
 
-        # Primary
+        # Primary Button (Now takes the full width of the column, matching the inputs)
         if st.button("Login"):
             navigate("Dashboard")
 
+        # Secondary Button Container
         st.markdown("<div class='sec-container'>", unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("Forgot Password?"):
+            if st.button("Forgot Password?", key="forgot_btn"): # Added unique key
                 navigate("Forgot")
 
         with col2:
-            if st.button("Create Account"):
+            if st.button("Create Account", key="create_btn"): # Added unique key
                 navigate("Signup")
 
         st.markdown("</div>", unsafe_allow_html=True)
