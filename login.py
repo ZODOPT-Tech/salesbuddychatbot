@@ -4,167 +4,169 @@ import bcrypt
 import boto3
 import json
 
-# -------------------------------------------------------
+# --------------------------------------------
 # PAGE CONFIG
-# -------------------------------------------------------
-st.set_page_config(page_title="Sales Buddy Login", layout="wide")
+# --------------------------------------------
+st.set_page_config(page_title="Sales Buddy | Login", layout="wide")
 
-# -------------------------------------------------------
-# CSS
-# -------------------------------------------------------
+
+# --------------------------------------------
+# GLOBAL CSS
+# --------------------------------------------
 CSS = """
 <style>
 
 * {
-    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: "Inter", sans-serif;
 }
 
-/* Remove default Streamlit padding so we can control everything */
-.stApp > header {display: none;}
+.stApp > header {display:none;}
+.stApp > footer {display:none;}
+
 .stApp > main .block-container {
     padding: 0 !important;
     margin: 0 !important;
 }
 
-/* Wrapper for the whole page */
 .page-wrapper {
     height: 100vh;
     width: 100vw;
+    overflow: hidden;
 }
 
-/* Make the columns stretch full height */
-.page-wrapper [data-testid="stHorizontalBlock"] {
+/* Make columns fill full height */
+[data-testid="stHorizontalBlock"] {
     height: 100%;
 }
 
 /* LEFT PANEL */
 .left-panel {
-    height: 100%;
-    padding: 60px 80px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    background-color: #ffffff;
+    height:100%;
+    background:#ffffff;
+    padding:70px 90px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
 }
 
 .logo-text {
-    font-size: 26px;
-    font-weight: 700;
-    color: #1a1f2b;
-    margin-bottom: 40px;
+    font-size:28px;
+    font-weight:700;
+    color:#1b1d25;
+    margin-bottom:45px;
 }
 
 .main-heading {
-    font-size: 42px;
-    font-weight: 800;
-    color: #151821;
-    margin-bottom: 8px;
+    font-size:44px;
+    font-weight:800;
+    margin-bottom:10px;
+    color:#151821;
 }
 
 .subtext {
-    font-size: 18px;
-    color: #7d8a96;
-    margin-bottom: 35px;
+    font-size:18px;
+    color:#77808a;
+    margin-bottom:40px;
 }
 
-/* Input styling */
+/* Input box */
 .stTextInput > div > div > input {
-    background: #eef3f6 !important;
-    border-radius: 14px !important;
-    border: none !important;
-    padding: 16px !important;
-    font-size: 17px !important;
+    background:#eef3f6 !important;
+    border:none !important;
+    border-radius:14px !important;
+    padding:16px !important;
+    font-size:17px !important;
 }
 
 .stTextInput input::placeholder {
-    color: #9ca3af;
+    color:#9ca3af;
 }
 
-/* Login button (submit inside form) */
+/* Submit button inside form */
 .left-panel form button {
-    background: linear-gradient(90deg,#27c4a8,#23a6d5) !important;
-    border-radius: 30px !important;
-    border: none !important;
-    padding: 14px 0 !important;
-    margin-top: 22px !important;
-    width: 100% !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
+    background:linear-gradient(90deg,#27c4a8,#23a6d5) !important;
+    border:none !important;
+    border-radius:40px !important;
+    padding:15px 0 !important;
+    width:100% !important;
+    font-size:18px !important;
+    font-weight:700 !important;
+    color:#ffffff !important;
+    margin-top:25px !important;
 }
 
 /* RIGHT PANEL */
 .right-panel {
-    height: 100%;
-    padding: 60px 50px;
-    background: linear-gradient(180deg,#27c4a8,#23a6d5);
-    color: #ffffff;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    text-align: left;
+    height:100%;
+    color:white;
+    padding:80px 60px;
+    background:linear-gradient(180deg,#27c4a8,#23a6d5);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
 }
 
-/* Abstract circles like the design */
+/* Abstract circles */
 .right-panel::before {
-    content: "";
-    position: absolute;
-    top: 10%;
-    right: -40px;
-    width: 220px;
-    height: 220px;
-    background: rgba(255,255,255,0.12);
-    border-radius: 50%;
+    content:"";
+    position:absolute;
+    width:200px;
+    height:200px;
+    background:rgba(255,255,255,0.16);
+    border-radius:50%;
+    top:12%;
+    right:-50px;
 }
 
 .right-panel::after {
-    content: "";
-    position: absolute;
-    bottom: -60px;
-    left: -40px;
-    width: 280px;
-    height: 280px;
-    background: rgba(255,255,255,0.12);
-    border-radius: 50%;
+    content:"";
+    position:absolute;
+    width:280px;
+    height:280px;
+    background:rgba(255,255,255,0.14);
+    border-radius:50%;
+    bottom:-60px;
+    left:-60px;
 }
 
 .side-title {
-    font-size: 40px;
-    font-weight: 800;
-    margin-bottom: 16px;
-    position: relative;
-    z-index: 1;
+    font-size:40px;
+    font-weight:800;
+    margin-bottom:16px;
+    position:relative;
+    z-index:10;
 }
 
 .side-text {
-    font-size: 18px;
-    color: #e5fbf7;
-    margin-bottom: 40px;
-    position: relative;
-    z-index: 1;
+    font-size:18px;
+    line-height:1.4;
+    color:#e4fbf7;
+    margin-bottom:40px;
+    position:relative;
+    z-index:10;
 }
 
-/* Sign up button on right side */
 .right-panel .stButton > button {
-    background: #ffffff !important;
-    color: #21b5a2 !important;
-    border-radius: 30px !important;
-    padding: 14px 40px !important;
-    border: none !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    position: relative;
-    z-index: 1;
+    background:#ffffff !important;
+    color:#20b5a3 !important;
+    border-radius:40px !important;
+    padding:14px 45px !important;
+    font-size:18px !important;
+    font-weight:700 !important;
+    border:none !important;
+    position:relative;
+    z-index:10;
 }
 
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
-# -------------------------------------------------------
-# SECRETS / DB
-# -------------------------------------------------------
+
+# --------------------------------------------
+# AWS Secrets & DB
+# --------------------------------------------
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
 @st.cache_resource
@@ -184,20 +186,19 @@ def get_conn():
         charset="utf8mb4"
     )
 
-# -------------------------------------------------------
-# RENDER FUNCTION
-# -------------------------------------------------------
+
+# --------------------------------------------
+# RENDER LOGIN UI
+# --------------------------------------------
 def render(navigate):
 
-    # Outer wrapper (forces full screen, no scroll on normal displays)
     st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
 
-    col_left, col_right = st.columns([3, 2], gap="none")
+    col_left, col_right = st.columns([3,2], gap="small")
 
-    # ---------------- LEFT PANEL (LOGIN) ----------------
+    # ---------------- LEFT PANEL ----------------
     with col_left:
         st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
-
         st.markdown("<div class='logo-text'>Sales Buddy</div>", unsafe_allow_html=True)
         st.markdown("<div class='main-heading'>Login to Your Account</div>", unsafe_allow_html=True)
         st.markdown("<div class='subtext'>Access your account</div>", unsafe_allow_html=True)
@@ -214,17 +215,16 @@ def render(navigate):
                     try:
                         conn = get_conn()
                         cur = conn.cursor(dictionary=True)
-                        cur.execute(
-                            "SELECT user_id, full_name, email, company, password "
-                            "FROM users WHERE email=%s",
-                            (email,)
-                        )
+                        cur.execute("""
+                            SELECT user_id, full_name, email, company, password
+                            FROM users WHERE email=%s
+                        """, (email,))
                         user = cur.fetchone()
                         cur.close()
 
                         if user and bcrypt.checkpw(
-                            password.encode("utf-8"),
-                            user["password"].encode("utf-8")
+                            password.encode('utf-8'),
+                            user['password'].encode('utf-8')
                         ):
                             st.session_state.logged_in = True
                             st.session_state.user_data = {
@@ -241,21 +241,17 @@ def render(navigate):
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------- RIGHT PANEL (NEW HERE) ----------------
+
+    # ---------------- RIGHT PANEL ----------------
     with col_right:
         st.markdown("<div class='right-panel'>", unsafe_allow_html=True)
-
         st.markdown("<div class='side-title'>New Here?</div>", unsafe_allow_html=True)
-        st.markdown(
-            "<div class='side-text'>"
-            "Sign up and discover a great amount of new opportunities!"
-            "</div>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<div class='side-text'>Sign up and discover a great amount of new opportunities!</div>", unsafe_allow_html=True)
 
-        if st.button("Sign Up", key="signup_btn"):
+        if st.button("Sign Up"):
             navigate("signup")
 
         st.markdown("</div>", unsafe_allow_html=True)
+
 
     st.markdown("</div>", unsafe_allow_html=True)
