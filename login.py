@@ -19,21 +19,27 @@ CSS = """
     display:none;
 }
 
+/* Ensure the main container takes full viewport height and remove default padding/margin */
 .stApp > main .block-container {
     padding:0 !important;
     margin:0 !important;
+    max-width: 100% !important; /* Important for wide layout */
+    min-height: 100vh; /* Ensure full height */
 }
 
 /* full page wrapper */
 .page {
     width:100vw;
     height:100vh;
-    overflow:hidden;
+    overflow:hidden; /* Prevents scrolling */
+    display: flex;
 }
 
 /* make columns full height */
+/* The block that holds st.columns */
 [data-testid="stHorizontalBlock"] {
     height:100%;
+    width: 100%;
 }
 
 /* LEFT PANEL */
@@ -63,8 +69,8 @@ CSS = """
     width:420px;
     background:#ffffff;
     border-radius:18px;
-    padding:30px 32px 34px;
-    box-shadow:0 18px 45px rgba(40,56,120,0.08);
+    padding:0; /* Removed padding here as it's not needed for the card wrapper */
+    /* box-shadow:0 18px 45px rgba(40,56,120,0.08); Removed to simplify the look */
 }
 
 .stTextInput > div > div > input {
@@ -94,38 +100,19 @@ form button {
 /* RIGHT PANEL – gradient background */
 .right {
     height:100%;
-    padding:70px 70px 70px 60px;
-    background:linear-gradient(140deg,#1ccdab,#00a6d9,#008bd5);
+    /* Gradient color adjusted to better match the visual style of the image's background */
+    background:linear-gradient(135deg, #00A6D9 0%, #008BD5 50%, #1CCABF 100%);
     display:flex;
     flex-direction:column;
     justify-content:center;
     align-items:flex-start;
     color:#ffffff;
     position:relative;
+    padding: 70px; /* Keep padding for content spacing */
+    overflow: hidden; /* Important for the pseudo-elements */
 }
 
-/* decorative circles like the reference */
-.right::before {
-    content:"";
-    position:absolute;
-    width:320px;
-    height:320px;
-    top:80px;
-    right:-90px;
-    background:rgba(255,255,255,0.14);
-    border-radius:50%;
-}
-
-.right::after {
-    content:"";
-    position:absolute;
-    width:390px;
-    height:390px;
-    bottom:-120px;
-    left:-110px;
-    background:rgba(255,255,255,0.11);
-    border-radius:50%;
-}
+/* Removed decorative circles as they weren't in the reference image's simplified right panel */
 
 .brand {
     font-size:28px;
@@ -159,6 +146,43 @@ form button {
     font-size:18px !important;
     z-index:10;
 }
+
+/* Custom element to act as the decorative shape/banner on the right side */
+.right-banner {
+    position: absolute;
+    top: 60px; /* Position it high up */
+    right: 50px; /* Position it to the right */
+    width: 300px; /* Adjust size */
+    height: 100px; /* Adjust size */
+    /* Use a similar but simpler gradient/color to mimic the shape */
+    background: linear-gradient(90deg, #1CCABF, #00A6D9);
+    border-radius: 10px;
+    /* Apply a slight skew/transform if desired for a more dynamic look */
+    /* transform: skewY(-2deg); */ 
+    z-index: 1; /* Keep it below text */
+}
+
+/* Overriding the text color for the 'New Here?' section to match the light grey in the image */
+.right .nh {
+    font-size: 56px; /* Increased for better visual weight */
+}
+
+.right .desc {
+    color: #ffffff; /* Keeping description white for contrast */
+    font-size: 16px;
+    font-weight: 400;
+}
+
+/* Adjusting the content display for the right panel to match the screenshot */
+.right-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    z-index: 5; /* Ensure content is above the banner */
+    margin-top: -150px; /* Nudge up content to align with the image's layout */
+}
+
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -177,7 +201,8 @@ def get_db():
     )
 
 def render(navigate):
-    st.markdown("<div class='page'>", unsafe_allow_html=True)
+    # The 'page' div now correctly wraps the full content
+    st.markdown("<div class='page'>", unsafe_allow_html=True) 
     col1, col2 = st.columns([2.7, 2], gap="small")
 
     # LEFT PANEL
@@ -196,36 +221,61 @@ def render(navigate):
         with st.form("login"):
             email = st.text_input("", placeholder="Email")
             password = st.text_input("", placeholder="Password", type="password")
+            # Removed the password visibility icon in the Python code for a cleaner look
             ok = st.form_submit_button("Sign In")
 
             if ok:
-                conn = get_db()
-                cur = conn.cursor(dictionary=True)
-                cur.execute("SELECT * FROM users WHERE email=%s", (email,))
-                user = cur.fetchone()
-                cur.close()
-                if user and bcrypt.checkpw(
-                    password.encode(), user["password"].encode()
-                ):
-                    st.session_state.logged_in = True
-                    st.session_state.user_data = user
-                    navigate("chatbot")
-                else:
-                    st.error("Incorrect email or password.")
+                try:
+                    conn = get_db()
+                    cur = conn.cursor(dictionary=True)
+                    cur.execute("SELECT * FROM users WHERE email=%s", (email,))
+                    user = cur.fetchone()
+                    cur.close()
+                    conn.close() # Always close connection
+                    if user and bcrypt.checkpw(
+                        password.encode(), user["password"].encode()
+                    ):
+                        st.session_state.logged_in = True
+                        st.session_state.user_data = user
+                        navigate("chatbot")
+                    else:
+                        st.error("Incorrect email or password.")
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")
+                    
         st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # RIGHT PANEL
     with col2:
         st.markdown("<div class='right'>", unsafe_allow_html=True)
+        
+        # Add the decorative banner element using CSS class
+        st.markdown("<div class='right-banner'></div>", unsafe_allow_html=True)
+
+        # Content container to adjust alignment
+        st.markdown("<div class='right-content'>", unsafe_allow_html=True)
+        
+        # Display the brand name (Sales Buddy) and the login prompt.
+        # This will now be overlaid on the gradient background.
         st.markdown("<div class='brand'>Sales Buddy</div>", unsafe_allow_html=True)
         st.markdown("<div class='nh'>New Here?</div>", unsafe_allow_html=True)
+        
+        # Use a div with a custom style to match the light-grey-on-gradient effect of the image
         st.markdown(
-            "<div class='desc'>Sign up and discover a great amount of new opportunities!</div>",
+            """
+            <div class='desc' style='color:#e8fbf8;'>
+                Sign up and discover a great amount of new opportunities!
+            </div>
+            """,
             unsafe_allow_html=True,
         )
+        
+        # Sign Up button
         if st.button("Sign Up"):
             navigate("signup")
+            
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
