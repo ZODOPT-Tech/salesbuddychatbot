@@ -1,40 +1,114 @@
-
 import streamlit as st
 from PIL import Image
 import requests
 from io import BytesIO
+import boto3
+import json
+import mysql.connector
 
-# ---------------- CONSTANTS ----------------
+
+# --------------------------------------------------------
+# ---------------- AWS Secrets Manager -------------------
+# --------------------------------------------------------
+SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
+
+
+@st.cache_resource
+def get_db_secrets():
+    """Fetch DB credentials from AWS Secrets Manager."""
+    try:
+        client = boto3.client("secretsmanager", region_name="ap-south-1")
+        resp = client.get_secret_value(SecretId=SECRET_ARN)
+        raw = json.loads(resp["SecretString"])
+        return {
+            "DB_HOST": raw["DB_HOST"],
+            "DB_USER": raw["DB_USER"],
+            "DB_PASSWORD": raw["DB_PASSWORD"],
+            "DB_NAME": raw["DB_NAME"]
+        }
+    except Exception as e:
+        st.error(f"Configuration Error: Failed to load DB secrets: {e}")
+        st.stop()
+
+
+@st.cache_resource
+def get_conn():
+    """Connect to MySQL using AWS secrets."""
+    try:
+        creds = get_db_secrets()
+        conn = mysql.connector.connect(
+            host=creds["DB_HOST"],
+            user=creds["DB_USER"],
+            password=creds["DB_PASSWORD"],
+            database=creds["DB_NAME"],
+            charset="utf8mb4"
+        )
+        return conn
+    except mysql.connector.Error as e:
+        st.error(f"Database Connection Error: {e}")
+        st.stop()
+
+
+# --------------------------------------------------------
+# ---------------- AUTH LOGIC ----------------------------
+# --------------------------------------------------------
+def authenticate_user(email, password):
+    """
+    Validate login credentials against DB.
+    """
+    try:
+        conn = get_conn()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT full_name, email
+        FROM users
+        WHERE email = %s AND password = %s
+        LIMIT 1
+        """
+        cursor.execute(query, (email, password))
+        row = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if row:
+            return True, row
+        else:
+            return False, None
+
+    except Exception as e:
+        st.error(f"Login failed: {e}")
+        return False, None
+
+
+# --------------------------------------------------------
+# ---------------- CONSTANTS -----------------------------
+# --------------------------------------------------------
 LOGO_URL = "https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
 PRIMARY_COLOR = "#0B2A63"
 
 
-# ---------------- STYLES ----------------
+# --------------------------------------------------------
+# ---------------- STYLES -------------------------------
+# --------------------------------------------------------
 def apply_styles():
     st.markdown(f"""
     <style>
-
-    /* GLOBAL FONT */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
     html, body, [data-testid="stAppViewContainer"] {{
         font-family: "Inter", sans-serif;
         background-color: #F6F8FB;
     }}
 
-    [data-testid="stHeader"] {{
-        background: transparent;
-    }}
-
-    /* INPUT LABEL FIX */
     .stTextInput label {{
         display: block !important;
-        margin-bottom: 6px !important;
         font-weight: 600 !important;
         font-size: 15px !important;
         color: #1A1F36 !important;
     }}
 
-    /* INPUT FIELD */
     .stTextInput input {{
         border-radius: 8px !important;
         height: 46px !important;
@@ -43,22 +117,16 @@ def apply_styles():
         font-size: 15px !important;
     }}
 
-    /* -------- BUTTON FIX (WORKS IN ALL STREAMLIT) -------- */
-
-    /* PRIMARY BUTTON (Login) - MODIFIED: Removed width: 100% !important; */
     div[data-testid="stVerticalBlock"] > div:first-child button,
     div[data-testid="stVerticalBlock"] > div:first-child button span {{
         background-color: {PRIMARY_COLOR} !important;
         color: white !important;
-        /* width: 100% !important; <--- REMOVED */
         height: 48px !important;
         font-size: 17px !important;
         font-weight: 700 !important;
         border-radius: 8px !important;
-        border: none !important;
     }}
 
-    /* SECONDARY BUTTONS (Forgot + Create) */
     .sec-container button,
     .sec-container button span {{
         background-color: {PRIMARY_COLOR} !important;
@@ -68,15 +136,12 @@ def apply_styles():
         font-size: 15px !important;
         font-weight: 600 !important;
         border-radius: 8px !important;
-        border: none !important;
     }}
 
-    /* Remove default hover */
     button:hover {{
         opacity: 0.92 !important;
     }}
 
-    /* TITLE */
     .title {{
         font-size: 34px;
         font-weight: 800;
@@ -86,7 +151,6 @@ def apply_styles():
         text-align:left;
     }}
 
-    /* LEFT SIDE */
     .left-panel {{
         text-align: center;
         padding-top: 80px;
@@ -103,39 +167,36 @@ def apply_styles():
         text-align:left;
     }}
 
-    /* SECONDARY BUTTON WRAP */
     .sec-container {{
         display: flex;
         justify-content: center;
         gap: 28px;
         margin-top: 20px;
     }}
-
     </style>
     """, unsafe_allow_html=True)
 
 
-# ---------------- PAGE CONTENT ----------------
+# --------------------------------------------------------
+# ---------------- PAGE CONTENT --------------------------
+# --------------------------------------------------------
 def render(navigate):
     st.set_page_config(layout="wide")
     apply_styles()
 
     left, right = st.columns([1.1, 1])
 
-    # LEFT
+    # LEFT PANEL
     with left:
         st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
 
         try:
-            # Use a context manager for requests to ensure connection closure
             response = requests.get(LOGO_URL)
-            response.raise_for_status() # Raise an exception for bad status codes
+            response.raise_for_status()
             logo = Image.open(BytesIO(response.content))
             st.image(logo, width=330)
-        except requests.exceptions.RequestException as e:
-            st.error(f"Logo failed to load: {e}")
-        except Exception as e:
-            st.error(f"An unexpected error occurred: {e}")
+        except Exception:
+            st.error("Logo loading failed")
 
         st.markdown("""
         <div class="contact">
@@ -148,35 +209,42 @@ def render(navigate):
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # RIGHT
+    # RIGHT PANEL
     with right:
         st.markdown("<div class='title'>LOGIN TO YOUR ACCOUNT</div>", unsafe_allow_html=True)
 
-        # The input fields
         email = st.text_input("Email Address")
         password = st.text_input("Password", type="password")
 
-        # Primary Button (Now takes the full width of the column, matching the inputs)
         if st.button("Login"):
-            navigate("Dashboard")
+            success, user_data = authenticate_user(email, password)
 
-        # Secondary Button Container
+            if success:
+                st.session_state.logged_in = True
+                st.session_state.user_data = user_data
+                navigate("chatbot")
+            else:
+                st.error("Invalid Email or Password")
+
         st.markdown("<div class='sec-container'>", unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("Forgot Password?", key="forgot_btn"): # Added unique key
-                navigate("Forgot")
+            if st.button("Forgot Password?", key="forgot_btn"):
+                navigate("forgot_password")
 
         with col2:
-            if st.button("Create Account", key="create_btn"): # Added unique key
-                navigate("Signup")
+            if st.button("Create Account", key="create_btn"):
+                navigate("signup")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ---------------- TESTING ----------------
+# --------------------------------------------------------
+# ---------------- TESTING -------------------------------
+# --------------------------------------------------------
 if __name__ == "__main__":
-    def dummy_nav(x): st.success(f"Navigate → {x}")
+    def dummy_nav(x):
+        st.success(f"Navigate → {x}")
     render(dummy_nav)
