@@ -4,289 +4,205 @@ import bcrypt
 import boto3
 import json
 
-# Set page to wide layout and title
+# ---- PAGE SETUP ----
 st.set_page_config(page_title="Sales Buddy | Login", layout="wide")
 
-# --- CSS Styling for the Perfect Layout ---
-CSS = """
+
+# ---- CSS ----
+st.markdown("""
 <style>
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
 
 * {
-    font-family:'Poppins',sans-serif;
-    box-sizing:border-box;
+    font-family: 'Poppins', sans-serif;
 }
 
-/* Hide Streamlit default header/footer */
-.stApp > header, .stApp > footer {
-    display:none;
-}
+.stApp > header, .stApp > footer {display:none !important;}
 
-/* 1. Full-Screen, No-Scroll Setup */
 .stApp > main .block-container {
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
-    min-height: 100vh;
 }
 
-.page {
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden; /* Prevent scrolling */
+.wrapper {
     display: flex;
-}
-
-[data-testid="stHorizontalBlock"] {
-    height: 100%;
-    width: 100%;
-}
-
-/* --- LEFT PANEL (Login Form) --- */
-.left {
-    padding:60px 90px;
-    background:white;
-    height:100%;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-}
-
-.title {
-    font-size:52px;
-    font-weight:800;
-    margin-bottom:10px;
-}
-
-.subtitle {
-    font-size:19px;
-    color:#7c8590;
-    margin-bottom:35px;
-}
-
-.card {
-    width:460px;
-    background:white;
-    padding:0; 
-    border-radius:0;
-    border: none;
-}
-
-/* Styling for Email/Password Input Fields (Light Grey background) */
-.stTextInput > div > div > input {
-    background:#eef2f6 !important;
-    border:none !important;
-    border-radius:12px !important;
-    padding:15px !important;
-}
-
-.stTextInput label {
-    display: none;
-}
-
-/* --- Sign In Button (Green, square corners, inside form) --- */
-form button {
-    background:#20c997 !important; 
-    color:white !important;
-    border:none !important;
-    border-radius:12px !important; 
-    padding:12px 0 !important;
-    font-weight:700 !important;
-    font-size:18px !important;
-    width:100% !important;
-    margin-top:20px;
-}
-
-/* --- Password Field Styling to match the Green Eye Icon/Area --- */
-
-/* 1. Make the password input element itself have a non-rounded right side */
-.stTextInput:nth-child(2) > div > div > input {
-    border-top-right-radius: 0px !important;
-    border-bottom-right-radius: 0px !important;
-    padding-right: 15px !important;
-}
-
-/* 2. Target the button element next to the password input (the eye icon) */
-.stTextInput:nth-child(2) > div > div > button {
-    background: #20c997 !important; /* Green background */
-    color: #ffffff !important;
-    border-radius: 12px !important;
-    border-top-left-radius: 0px !important;
-    border-bottom-left-radius: 0px !important;
-    height: 100% !important;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
-    width: 60px !important;
-}
-
-/* --- RIGHT PANEL (FULL BG) --- */
-.right {
-    height:100%;
-    padding:70px 60px;
-    background:linear-gradient(140deg,#1ccdab,#00a6d9,#008bd5);
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:flex-start;
-    color:white;
-    position:relative;
+    height: 100vh;
     overflow: hidden;
 }
 
-/* Decorative Circles */
-.right::before {
-    content:"";
-    position:absolute;
-    width:320px;
-    height:320px;
-    top:80px;
-    right:-90px;
-    background:rgba(255,255,255,0.14);
-    border-radius:50%;
+/* Left Panel */
+.left {
+    flex: 1;
+    padding: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #ffffff;
 }
 
-.right::after {
-    content:"";
-    position:absolute;
-    width:390px;
-    height:390px;
-    bottom:-120px;
-    left:-110px;
-    background:rgba(255,255,255,0.11);
-    border-radius:50%;
+.title {
+    font-size: 48px;
+    font-weight:800;
+    margin-bottom: 10px;
 }
 
-/* Content wrapper to position the text */
-.right-content-wrapper {
-    margin-top: -100px; /* Shift content up slightly for better balance */
-    z-index: 5;
+.subtitle {
+    font-size:18px;
+    color:#7c8590;
+    margin-bottom:40px;
+}
+
+.input-block input {
+    background: #eef2f6 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 14px !important;
+}
+
+form button {
+    background:#00b894 !important;
+    color:white !important;
+    border:none !important;
+    border-radius: 12px !important;
+    padding:14px !important;
+    font-size: 18px !important;
+    font-weight:700 !important;
+    width:100%;
+    margin-top: 25px;
+}
+
+/* Right Panel */
+.right {
+    flex: 1;
+    padding: 80px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    position: relative;
+}
+
+.overlay {
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.36);
+    border-radius: 0;
 }
 
 .brand {
-    font-size:30px;
+    font-size:32px;
     font-weight:700;
-    margin-bottom:60px;
-    z-index:5;
+    margin-bottom:30px;
+    z-index: 10;
 }
 
 .nh {
     font-size:46px;
     font-weight:800;
-    margin-bottom:12px;
-    z-index:5;
+    margin-bottom:10px;
+    z-index: 10;
 }
 
 .desc {
     font-size:19px;
     max-width:330px;
-    margin-bottom:35px;
-    color:#e8fbf8; 
-    z-index:5;
+    margin-bottom:40px;
+    z-index: 10;
+    color:#e9ffff;
 }
 
-/* Sign up button */
-.right .stButton > button {
+.right .stButton>button {
     background:white !important;
-    color:#15b7a5 !important;
+    color:#00a896 !important;
     font-weight:700 !important;
-    border-radius:35px !important;
+    border-radius: 40px !important;
     padding:14px 40px !important;
-    border:none !important;
     font-size:18px !important;
-    z-index:10;
+    border:none !important;
+    z-index: 10;
 }
-
 </style>
-"""
-st.markdown(CSS,unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 
-SECRET_ARN="arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
+# ---- DB ----
+SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
 @st.cache_resource
 def get_db():
-    try:
-        client=boto3.client("secretsmanager",region_name="ap-south-1")
-        s=json.loads(client.get_secret_value(SecretId=SECRET_ARN)["SecretString"])
-        return mysql.connector.connect(
-            host=s["DB_HOST"],user=s["DB_USER"],
-            password=s["DB_PASSWORD"],database=s["DB_NAME"]
-        )
-    except Exception as e:
-        st.error(f"DB connection error: {e}")
-        # Return None or raise an exception to stop further execution if critical
-        st.stop()
-        
+    client = boto3.client("secretsmanager", region_name="ap-south-1")
+    s = json.loads(client.get_secret_value(SecretId=SECRET_ARN)["SecretString"])
+    return mysql.connector.connect(
+        host=s["DB_HOST"], user=s["DB_USER"],
+        password=s["DB_PASSWORD"], database=s["DB_NAME"]
+    )
+
+
+# ---- RENDER ----
 def render(navigate):
 
-    st.markdown("<div class='page'>",unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='wrapper'>",
+        unsafe_allow_html=True
+    )
 
-    col1,col2=st.columns([2.7,2],gap="small")
+    # LEFT PANEL
+    left, right = st.columns([1,1])
+    with left:
+        st.markdown("<div class='left'>", unsafe_allow_html=True)
+        st.markdown("<div class='title'>Login to Your<br>Account</div>", unsafe_allow_html=True)
+        st.markdown("<div class='subtitle'>Access your account</div>", unsafe_allow_html=True)
 
-    # LEFT PANEL (Login)
-    with col1:
-        st.markdown("<div class='left'>",unsafe_allow_html=True)
-        st.markdown("<div class='title'>Login to Your<br>Account</div>",unsafe_allow_html=True)
-        st.markdown("<div class='subtitle'>Access your account</div>",unsafe_allow_html=True)
-
-        st.markdown("<div class='card'>",unsafe_allow_html=True)
         with st.form("login"):
-            email=st.text_input("",placeholder="Email")
-            password=st.text_input("",placeholder="Password",type="password") 
-            
-            # The Sign In button
-            ok=st.form_submit_button("Sign In")
-            
-            if ok:
-                try:
-                    conn=get_db()
-                    cur=conn.cursor(dictionary=True)
-                    cur.execute("SELECT * FROM users WHERE email=%s",(email,))
-                    user=cur.fetchone()
-                    cur.close()
-                    
-                    if user and bcrypt.checkpw(password.encode(),user["password"].encode()):
-                        st.session_state.logged_in=True
-                        st.session_state.user_data=user
-                        navigate("chatbot")
-                    else:
-                        st.error("Incorrect email or password.")
-                except Exception as e:
-                    # Generic error for the login process itself (excluding DB connection issues handled above)
-                    st.error(f"Login failed: {e}")
+            email = st.text_input("", placeholder="Email", key="email")
+            password = st.text_input("", placeholder="Password", type="password", key="pass")
+            submit = st.form_submit_button("Sign In")
 
-        st.markdown("</div>",unsafe_allow_html=True)
-        st.markdown("</div>",unsafe_allow_html=True)
+            if submit:
+                conn = get_db()
+                cur = conn.cursor(dictionary=True)
+                cur.execute("SELECT * FROM users WHERE email=%s", (email,))
+                user = cur.fetchone()
+                cur.close()
+                if user and bcrypt.checkpw(password.encode(), user["password"].encode()):
+                    st.session_state.logged_in = True
+                    st.session_state.user_data = user
+                    navigate("chatbot")
+                else:
+                    st.error("Incorrect email or password")
 
-    # RIGHT PANEL (Sign Up)
-    with col2:
-        st.markdown("<div class='right'>",unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # RIGHT PANEL
+    with right:
+        # IMPORTANT → SET IMAGE HERE
+        img_url = "https://i.postimg.cc/...png"   # Replace with your uploaded image
+        st.markdown(
+            f"<div class='right' style=\"background-image:url('{img_url}');\">",
+            unsafe_allow_html=True
+        )
         
-        # Wrapper for content to allow vertical repositioning via CSS
-        st.markdown("<div class='right-content-wrapper'>", unsafe_allow_html=True)
+        st.markdown("<div class='overlay'></div>", unsafe_allow_html=True)
         
-        st.markdown("<div class='brand'>Sales Buddy</div>",unsafe_allow_html=True)
-        st.markdown("<div class='nh'>New Here?</div>",unsafe_allow_html=True)
-        st.markdown("<div class='desc'>Sign up and discover a great amount of new opportunities!</div>",unsafe_allow_html=True)
+        st.markdown("<div class='brand'>Sales Buddy</div>", unsafe_allow_html=True)
+        st.markdown("<div class='nh'>New Here?</div>", unsafe_allow_html=True)
+        st.markdown("<div class='desc'>Sign up and discover great opportunities!</div>", unsafe_allow_html=True)
         
         if st.button("Sign Up"):
             navigate("signup")
-
-        st.markdown("</div>",unsafe_allow_html=True)
-        st.markdown("</div>",unsafe_allow_html=True)
-
-    st.markdown("</div>",unsafe_allow_html=True)
-
-
-if __name__ == "__main__":
-    # Define a simple placeholder function for the 'navigate' argument
-    def placeholder_navigate(page_name):
-        # Initialize session state if running in a single file
-        if 'logged_in' not in st.session_state:
-            st.session_state.logged_in = False
-            
-        st.info(f"Navigation triggered to: **{page_name}**")
         
-    # Run the render function
-    render(placeholder_navigate)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# LOCAL TEST
+if __name__ == "__main__":
+    def navigate(page): st.info(f"Navigate: {page}")
+    render(navigate)
