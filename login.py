@@ -5,12 +5,10 @@ import requests
 from io import BytesIO
 
 
-# --------- CONSTANTS ---------
 BG_URL = "https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1600&q=80"
 LOGO_URL = "https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
 
 
-# ---------- BACKGROUND + CSS ----------
 def set_background(url):
     try:
         img_bytes = requests.get(url).content
@@ -68,8 +66,8 @@ def set_background(url):
         pass
 
 
-# ------------------ UI -------------------
-def login(navigate_to):
+# ---------- RENAME TO render() -----------
+def render(navigate_to):
     st.set_page_config(layout="wide")
 
     set_background(BG_URL)
@@ -113,7 +111,7 @@ def login(navigate_to):
         password = st.text_input("Password", type="password")
 
         if st.button("LOGIN"):
-            st.success("Login UI working (no backend)")
+            st.success("Frontend UI working (no backend)")
             if navigate_to:
                 navigate_to("Survey")
 
@@ -134,10 +132,9 @@ def login(navigate_to):
         st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ---------- Local testing ----------
+# Local test
 if __name__ == "__main__":
-    def dummy(page):
-        st.success(f"NAVIGATION → {page}")
+    def dummy(x):
+        st.success(f"NAV → {x}")
         st.stop()
-
-    login(dummy)
+    render(dummy)
