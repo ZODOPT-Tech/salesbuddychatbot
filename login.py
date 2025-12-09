@@ -2,6 +2,7 @@ import streamlit as st
 import mysql.connector
 import bcrypt
 import base64
+import requests
 
 # ----------------------------------
 # PAGE CONFIG
@@ -12,11 +13,11 @@ st.set_page_config(
 )
 
 # ----------------------------------
-# BACKGROUND IMAGE FUNCTION
+# BACKGROUND IMAGE SETTER (WEB IMAGE)
 # ----------------------------------
-def set_background(image_path: str):
-    with open(image_path, "rb") as image_file:
-        encoded = base64.b64encode(image_file.read()).decode()
+def set_background(image_url: str):
+    img_data = requests.get(image_url).content
+    encoded = base64.b64encode(img_data).decode()
     st.markdown(
         f"""
         <style>
@@ -32,13 +33,12 @@ def set_background(image_path: str):
         unsafe_allow_html=True
     )
 
-# ----------------------------------
-# APPLY BACKGROUND
-# ----------------------------------
-set_background("images/bg.jpg")
+# Apply Background
+set_background("https://images.unsplash.com/photo-1542281286-9e0a16bb7366")
+
 
 # ----------------------------------
-# GLOBAL CSS (MATCHES YOUR DASHBOARD)
+# GLOBAL THEME CSS
 # ----------------------------------
 st.markdown("""
 <style>
@@ -57,7 +57,7 @@ st.markdown("""
     background: transparent !important;
 }
 
-/* Full Layout Wrapper */
+/* Page Layout Wrapper */
 .wrapper {
     height:100vh;
     display:flex;
@@ -65,7 +65,7 @@ st.markdown("""
     overflow:hidden;
 }
 
-/* Left panel */
+/* Left Panel */
 .left-panel {
     flex:1;
     display:flex;
@@ -74,7 +74,7 @@ st.markdown("""
     padding:80px;
 }
 
-/* Title text */
+/* Titles */
 .login-title {
     font-size:48px;
     font-weight:800;
@@ -87,23 +87,24 @@ st.markdown("""
     color:white;
 }
 
-/* Dark Card Style for Inputs */
+/* Login box */
 .form-box {
-    background-color: rgba(0,0,0,0.70);
-    backdrop-filter: blur(6px);
+    background-color: rgba(0,0,0,0.65);
+    backdrop-filter: blur(7px);
     padding: 40px;
-    border-radius: 18px;
-    width: 450px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+    border-radius: 20px;
+    width: 430px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.40);
 }
 
 /* Inputs */
 .stTextInput > div > div > input {
     background:#1a1a1a !important;
     color:white !important;
-    border: 1px solid #555 !important;
+    border: 1px solid #666 !important;
     border-radius:12px !important;
     padding:14px !important;
+    font-size:16px;
 }
 
 /* Buttons */
@@ -115,11 +116,11 @@ form button, .stButton > button {
     border:none !important;
     border-radius:12px !important;
     padding:14px !important;
-    margin-top:10px;
+    margin-top:14px;
     width:100% !important;
 }
 
-/* Right panel */
+/* Right panel (glass panel) */
 .right-panel {
     flex:1;
     display:flex;
@@ -129,7 +130,6 @@ form button, .stButton > button {
     background:rgba(0,0,0,0.35);
     border-left: 1px solid rgba(255,255,255,0.25);
     backdrop-filter: blur(6px);
-    text-align:left;
 }
 
 .right-title {
@@ -148,6 +148,7 @@ form button, .stButton > button {
 </style>
 """, unsafe_allow_html=True)
 
+
 # ----------------------------------
 # DATABASE
 # ----------------------------------
@@ -158,6 +159,7 @@ def get_db():
         password="",
         database="salesbuddy"
     )
+
 
 # ----------------------------------
 # LOGIN UI
@@ -212,6 +214,7 @@ def render(navigate):
 
     # Close wrapper
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ----------------------------------
 # LOCAL TEST
