@@ -3,13 +3,14 @@ from PIL import Image
 import requests
 from io import BytesIO
 
+
 LOGO_URL = "https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
 
 
 def apply_styles():
     st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', sans-serif;
@@ -21,10 +22,9 @@ def apply_styles():
         background: rgba(0,0,0,0);
     }
 
-    /* Left Logo Section */
     .left-panel {
         text-align: center;
-        padding-top: 90px;
+        padding-top: 80px;
     }
 
     .details {
@@ -32,10 +32,8 @@ def apply_styles():
         font-size: 16px;
         font-weight: 500;
         line-height: 2.2;
-        color: #1A1F36;
     }
 
-    /* Title */
     .title {
         font-size: 32px;
         font-weight: 800;
@@ -44,7 +42,7 @@ def apply_styles():
         color: #0B2A63;
     }
 
-    /* Inputs */
+    /* Labels */
     label {
         font-size: 15px !important;
         font-weight: 600 !important;
@@ -60,10 +58,10 @@ def apply_styles():
         border: 1px solid #CBD5E0;
     }
 
-    /* Login Button */
-    .login-btn > button {
+    /* Primary Button */
+    .primary-btn > button {
         width: 100%;
-        height: 46px;
+        height: 48px;
         border: none;
         border-radius: 8px;
         font-size: 17px;
@@ -72,18 +70,22 @@ def apply_styles():
         color: white;
     }
 
-    /* Inline links */
-    .bottom-links {
-        text-align: center;
-        margin-top: 16px;
+    .secondary-btn > button {
+        background: #0B2A63;
+        color: white;
+        width: 180px;
+        height: 42px;
+        border-radius: 8px;
         font-size: 15px;
         font-weight: 600;
-        color: #0B2A63;
+        border: none;
     }
 
-    .link {
-        margin: 0 18px;
-        cursor: pointer;
+    .secondary-container {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        margin-top: 14px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -95,14 +97,14 @@ def render(navigate):
 
     left, right = st.columns([1, 1])
 
-    # Left - Logo & Contact
+    # Left Side
     with left:
         st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
         try:
             logo = Image.open(BytesIO(requests.get(LOGO_URL).content))
-            st.image(logo, width=300)
+            st.image(logo, width=330)
         except:
-            st.write("Logo load error")
+            st.write("Logo Load Error")
 
         st.markdown("""
         <div class="details">
@@ -114,25 +116,35 @@ def render(navigate):
         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Right - Login Form
+    # Right Side
     with right:
         st.markdown("<div class='title'>LOGIN TO YOUR ACCOUNT</div>", unsafe_allow_html=True)
 
-        # Labels added
+        # Labels now visible
         email = st.text_input("Email Address", label_visibility="visible")
         password = st.text_input("Password", type="password", label_visibility="visible")
 
-        # Full width login button
-        st.markdown("<div class='login-btn'>", unsafe_allow_html=True)
+        # Primary login button - wider
+        st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
         if st.button("Login"):
             navigate("Dashboard")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Inline links same line
-        st.markdown("""
-        <div class="bottom-links">
-            <span class="link" onclick="window.location='?page=forgot'">Forgot Password?</span>
-            |
-            <span class="link" onclick="window.location='?page=signup'">Create Account</span>
-        </div>
-        """, unsafe_allow_html=True)
+        # Secondary buttons side by side
+        st.markdown("<div class='secondary-container'>", unsafe_allow_html=True)
+
+        col_forgot, col_create = st.columns(2)
+
+        with col_forgot:
+            st.markdown("<div class='secondary-btn'>", unsafe_allow_html=True)
+            if st.button("Forgot Password?"):
+                navigate("Forgot")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col_create:
+            st.markdown("<div class='secondary-btn'>", unsafe_allow_html=True)
+            if st.button("Create Account"):
+                navigate("Signup")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
