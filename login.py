@@ -4,8 +4,10 @@ import bcrypt
 import boto3
 import json
 
+# --- Configuration ---
 st.set_page_config(page_title="Sales Buddy | Login", layout="wide")
 
+# --- CSS Styling for Professional Look (Based on New Image) ---
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
@@ -23,26 +25,25 @@ CSS = """
 .stApp > main .block-container {
     padding:0 !important;
     margin:0 !important;
-    max-width: 100% !important; /* Important for wide layout */
-    min-height: 100vh; /* Ensure full height */
+    max-width: 100% !important;
+    min-height: 100vh;
 }
 
 /* full page wrapper */
 .page {
     width:100vw;
     height:100vh;
-    overflow:hidden; /* Prevents scrolling */
+    overflow:hidden;
     display: flex;
 }
 
 /* make columns full height */
-/* The block that holds st.columns */
 [data-testid="stHorizontalBlock"] {
     height:100%;
     width: 100%;
 }
 
-/* LEFT PANEL */
+/* --- LEFT PANEL (Login Form) --- */
 .left {
     padding:60px 90px;
     background:#ffffff;
@@ -64,15 +65,12 @@ CSS = """
     margin-bottom:28px;
 }
 
-/* form card */
-.card {
+/* form card wrapper - simplified */
+.card-wrapper {
     width:420px;
-    background:#ffffff;
-    border-radius:18px;
-    padding:0; /* Removed padding here as it's not needed for the card wrapper */
-    /* box-shadow:0 18px 45px rgba(40,56,120,0.08); Removed to simplify the look */
 }
 
+/* Styling for Email/Password Input Fields (Light Grey background) */
 .stTextInput > div > div > input {
     background:#eef2f6 !important;
     border-radius:12px !important;
@@ -85,108 +83,117 @@ CSS = """
     display:none !important;
 }
 
-form button {
+/* Styling for the GREEN Sign In button (inside the form) */
+/* Targeting the form submit button */
+.card-wrapper form button {
     background:#20c997 !important;
     color:#ffffff !important;
     border:none !important;
-    border-radius:35px !important;
+    border-radius:12px !important; /* Made border radius smaller to match inputs */
     padding:12px 0 !important;
     font-weight:700 !important;
     font-size:17px !important;
     width:100% !important;
-    margin-top:12px;
+    margin-top:16px;
+    height: auto !important; /* Ensure the button height is correct */
 }
 
-/* RIGHT PANEL – gradient background */
+/* Ensure the password input area's color matches the password visibility button */
+/* This is a common Streamlit hack to style the password input block */
+.stTextInput:nth-child(2) > div > div {
+    padding-right: 0px !important; /* Remove padding */
+}
+
+/* Additional styling to make the password field look like the image (green section) */
+.stTextInput:nth-child(2) > div > div > input {
+    border-top-right-radius: 0px !important;
+    border-bottom-right-radius: 0px !important;
+}
+/* This targets the eye icon wrapper (the green button area) */
+.stTextInput:nth-child(2) > div > div > button {
+    background: #20c997 !important;
+    color: #ffffff !important;
+    border-radius: 12px !important;
+    border-top-left-radius: 0px !important;
+    border-bottom-left-radius: 0px !important;
+    height: 100% !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    width: 60px !important; /* Adjust width to match the image */
+}
+
+/* --- RIGHT PANEL (Sign Up) --- */
 .right {
     height:100%;
-    /* Gradient color adjusted to better match the visual style of the image's background */
-    background:linear-gradient(135deg, #00A6D9 0%, #008BD5 50%, #1CCABF 100%);
+    background:#ffffff; /* WHITE Background */
     display:flex;
     flex-direction:column;
     justify-content:center;
     align-items:flex-start;
-    color:#ffffff;
+    padding: 70px 90px;
     position:relative;
-    padding: 70px; /* Keep padding for content spacing */
-    overflow: hidden; /* Important for the pseudo-elements */
 }
 
-/* Removed decorative circles as they weren't in the reference image's simplified right panel */
+/* Custom element to act as the decorative gradient banner on the right side */
+.right-banner {
+    position: absolute;
+    top: 150px; 
+    right: 200px; /* Position it high up and slightly right */
+    width: 200px;
+    height: 60px;
+    /* Gradient matching the one in the image */
+    background: linear-gradient(90deg, #1ccdab, #00a6d9);
+    border-radius: 5px;
+    z-index: 2; 
+}
+
+/* Content wrapper to center the text and button */
+.right-content {
+    z-index: 5;
+    margin-top: -150px; /* Adjust vertical centering */
+}
 
 .brand {
-    font-size:28px;
+    font-size:24px;
     font-weight:700;
-    margin-bottom:40px;
-    z-index:5;
+    color: #1c2a38;
+    margin-bottom:10px;
 }
 
 .nh {
     font-size:46px;
     font-weight:800;
     margin-bottom:10px;
-    z-index:5;
+    color: #1c2a38;
 }
 
 .desc {
     font-size:18px;
-    max-width:330px;
+    max-width:380px;
     margin-bottom:35px;
-    color:#e8fbf8;
-    z-index:5;
+    color:#b3bfcc; /* Light cyan/grey for the description */
+    font-weight: 600;
 }
 
-.right .stButton > button {
-    background:#ffffff !important;
-    color:#15b7a5 !important;
+/* Styling for the GREY Sign Up button (outside the form) */
+.right-content .stButton button {
+    background:#9aa1aa !important; /* Darker grey color */
+    color:#ffffff !important;
     font-weight:700 !important;
-    border-radius:35px !important;
-    padding:14px 40px !important;
+    border-radius:8px !important; /* Smaller radius */
+    padding:8px 30px !important;
     border:none !important;
-    font-size:18px !important;
-    z-index:10;
-}
-
-/* Custom element to act as the decorative shape/banner on the right side */
-.right-banner {
-    position: absolute;
-    top: 60px; /* Position it high up */
-    right: 50px; /* Position it to the right */
-    width: 300px; /* Adjust size */
-    height: 100px; /* Adjust size */
-    /* Use a similar but simpler gradient/color to mimic the shape */
-    background: linear-gradient(90deg, #1CCABF, #00A6D9);
-    border-radius: 10px;
-    /* Apply a slight skew/transform if desired for a more dynamic look */
-    /* transform: skewY(-2deg); */ 
-    z-index: 1; /* Keep it below text */
-}
-
-/* Overriding the text color for the 'New Here?' section to match the light grey in the image */
-.right .nh {
-    font-size: 56px; /* Increased for better visual weight */
-}
-
-.right .desc {
-    color: #ffffff; /* Keeping description white for contrast */
-    font-size: 16px;
-    font-weight: 400;
-}
-
-/* Adjusting the content display for the right panel to match the screenshot */
-.right-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-    z-index: 5; /* Ensure content is above the banner */
-    margin-top: -150px; /* Nudge up content to align with the image's layout */
+    font-size:16px !important;
+    width: auto !important;
+    height: auto !important;
+    margin-top: 10px;
 }
 
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
+# --- AWS Secrets and DB Connection Setup (Kept as is) ---
 SECRET_ARN = "arn:aws:secretsmanager:ap-south-1:034362058776:secret:salesbuddy/secrets-0xh2TS"
 
 @st.cache_resource
@@ -200,16 +207,16 @@ def get_db():
         database=s["DB_NAME"],
     )
 
+# --- Streamlit Rendering Function ---
 def render(navigate):
-    # The 'page' div now correctly wraps the full content
-    st.markdown("<div class='page'>", unsafe_allow_html=True) 
+    st.markdown("<div class='page'>", unsafe_allow_html=True)
     col1, col2 = st.columns([2.7, 2], gap="small")
 
-    # LEFT PANEL
+    # LEFT PANEL (Login)
     with col1:
         st.markdown("<div class='left'>", unsafe_allow_html=True)
         st.markdown(
-            "<div class='title'>Login to Your Account</div>",
+            "<div class='title'>Login to Your<br>Account</div>", # Line break for visual alignment
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -217,11 +224,16 @@ def render(navigate):
             unsafe_allow_html=True,
         )
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-wrapper'>", unsafe_allow_html=True)
         with st.form("login"):
+            # These are now styled with the light gray background via CSS
             email = st.text_input("", placeholder="Email")
-            password = st.text_input("", placeholder="Password", type="password")
-            # Removed the password visibility icon in the Python code for a cleaner look
+            
+            # Note: Streamlit handles the password input and the eye icon internally.
+            # We use CSS to force the custom colors for the button area next to the input.
+            password = st.text_input("", placeholder="Password", type="password") 
+            
+            # The green "Sign In" button is the form submit button
             ok = st.form_submit_button("Sign In")
 
             if ok:
@@ -231,7 +243,7 @@ def render(navigate):
                     cur.execute("SELECT * FROM users WHERE email=%s", (email,))
                     user = cur.fetchone()
                     cur.close()
-                    conn.close() # Always close connection
+                    conn.close()
                     if user and bcrypt.checkpw(
                         password.encode(), user["password"].encode()
                     ):
@@ -241,12 +253,12 @@ def render(navigate):
                     else:
                         st.error("Incorrect email or password.")
                 except Exception as e:
-                    st.error(f"An error occurred: {e}")
-                    
+                    st.error(f"An error occurred during login.") # Simplified error for production look
+
         st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # RIGHT PANEL
+    # RIGHT PANEL (Sign Up)
     with col2:
         st.markdown("<div class='right'>", unsafe_allow_html=True)
         
@@ -256,22 +268,19 @@ def render(navigate):
         # Content container to adjust alignment
         st.markdown("<div class='right-content'>", unsafe_allow_html=True)
         
-        # Display the brand name (Sales Buddy) and the login prompt.
-        # This will now be overlaid on the gradient background.
+        # Brand Name
         st.markdown("<div class='brand'>Sales Buddy</div>", unsafe_allow_html=True)
+        
+        # New Here?
         st.markdown("<div class='nh'>New Here?</div>", unsafe_allow_html=True)
         
-        # Use a div with a custom style to match the light-grey-on-gradient effect of the image
+        # Description
         st.markdown(
-            """
-            <div class='desc' style='color:#e8fbf8;'>
-                Sign up and discover a great amount of new opportunities!
-            </div>
-            """,
+            "<div class='desc'>Sign up and discover a great amount of new opportunities!</div>",
             unsafe_allow_html=True,
         )
         
-        # Sign Up button
+        # Grey "Sign Up" button
         if st.button("Sign Up"):
             navigate("signup")
             
