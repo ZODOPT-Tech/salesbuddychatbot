@@ -5,23 +5,24 @@ from io import BytesIO
 from PIL import Image
 
 LOGO_URL = "https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
-BG_URL = "https://images.unsplash.com/photo-1526401281623-c3e51775f7c5?auto=format&fit=crop&w=1600&q=80"
+BG_URL = "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80"
 
 
-def set_background(url):
-    bg_bytes = requests.get(url).content
-    encoded = base64.b64encode(bg_bytes).decode()
+def set_styles(bg):
+    bg_bytes = requests.get(bg).content
+    encoded_bg = base64.b64encode(bg_bytes).decode()
 
     st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
 
     html, body, [data-testid="stAppViewContainer"] {{
-        font-family: 'Poppins', sans-serif;
-        background-image: url("data:image/jpeg;base64,{encoded}");
+        font-family: 'Inter', sans-serif;
+        background-image: url("data:image/jpeg;base64,{encoded_bg}");
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
+        color: #0E1A2A;
     }}
 
     [data-testid="stHeader"] {{
@@ -29,67 +30,69 @@ def set_background(url):
     }}
 
     .login-card {{
-        width: 430px;
-        background: rgba(255,255,255,0.16);
-        backdrop-filter: blur(14px);
+        width: 420px;
+        margin: auto;
+        margin-top: 85px;
+        padding: 45px 40px;
         border-radius: 18px;
-        padding: 35px 38px;
-        margin-top: 75px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        background: rgba(255,255,255,0.16);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0px 8px 28px rgba(0,0,0,0.18);
     }}
 
     .title {{
         font-size: 28px;
-        font-weight: 700;
+        font-weight: 800;
         text-align: center;
-        margin-bottom: 30px;
-        color: #062B5C;
+        margin-bottom: 35px;
+        color: #0E1A2A;
     }}
 
     .stTextInput>div>div>input {{
         border-radius: 10px;
-        padding: 11px;
-        background: rgba(255,255,255,0.88);
+        height: 48px;
+        font-size: 16px;
         font-weight: 500;
-        border: 1px solid #d2d6e0;
-        color: #0D1A2F;
+        border: 1px solid #C8CFD9;
+        background: rgba(255,255,255,0.80);
     }}
 
     .login-btn>button {{
-        width: 100%;
-        padding: 13px;
-        background: #0059FF;
         border-radius: 10px;
-        color: white;
+        height: 48px;
         font-size: 17px;
-        font-weight: 600;
+        font-weight: 700;
+        width: 100%;
         border: none;
+        color: white;
+        background: linear-gradient(135deg,#1E5FBF,#003AAE);
     }}
 
-    .inline-links {{
+    .actions {{
         display: flex;
         justify-content: space-between;
-        margin-top: 15px;
+        margin-top: 18px;
+        font-weight: 600;
+        font-size: 15px;
     }}
 
-    .link-btn {{
-        font-size: 15px;
-        font-weight: 600;
-        color: #0059FF;
+    .link-action {{
+        color: #1E5FBF;
         cursor: pointer;
     }}
 
     .contact {{
-        margin-top: 40px;
-        line-height: 1.9;
+        margin-top: 45px;
+        line-height: 2.0;
         font-size: 17px;
-        color: white;
         font-weight: 400;
+        color: #0E1A2A;
     }}
 
     .contact-line {{
         display: flex;
-        gap: 10px;
+        gap: 12px;
         align-items: center;
     }}
     </style>
@@ -98,13 +101,12 @@ def set_background(url):
 
 def render(navigate):
     st.set_page_config(layout="wide")
+    set_styles(BG_URL)
 
-    set_background(BG_URL)
+    col1, col2 = st.columns([1, 1], gap="large")
 
-    left, right = st.columns([1,1])
-
-    # LEFT SECTION (Branding + Contact)
-    with left:
+    # LEFT SIDE (Brand)
+    with col1:
         try:
             logo = Image.open(BytesIO(requests.get(LOGO_URL).content))
             st.image(logo, width=300)
@@ -113,41 +115,35 @@ def render(navigate):
 
         st.markdown("""
         <div class="contact">
-            <div class="contact-line">📞  +123-456-7890</div>
-            <div class="contact-line">✉️  hello@vclarifi.com</div>
-            <div class="contact-line">🌐  www.vclarifi.com</div>
-            <div class="contact-line">📍  India</div>
+            <div class="contact-line">📞 Phone: +123-456-7890</div>
+            <div class="contact-line">✉️ Email: hello@vclarifi.com</div>
+            <div class="contact-line">🌐 Website: www.vclarifi.com</div>
+            <div class="contact-line">📍 India</div>
         </div>
         """, unsafe_allow_html=True)
 
-    # RIGHT SECTION (Login)
-    with right:
+    # RIGHT SIDE (Form)
+    with col2:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.markdown('<div class="title">LOGIN TO YOUR ACCOUNT</div>', unsafe_allow_html=True)
 
         email = st.text_input("Email")
         pwd = st.text_input("Password", type="password")
 
-        # Login button
         st.markdown('<div class="login-btn">', unsafe_allow_html=True)
         if st.button("Login"):
             navigate("Dashboard")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Inline actions (same line)
-        st.markdown('<div class="inline-links">', unsafe_allow_html=True)
+        # Inline Actions
+        st.markdown('<div class="actions">', unsafe_allow_html=True)
 
-        if st.button("Forgot Password?", key="forgot"):
+        if st.button("Forgot Password?", key="forgot", help="Recover Account"):
             navigate("Forgot")
 
-        if st.button("Create Account", key="signup"):
+        if st.button("Create Account", key="signup", help="Register Now"):
             navigate("Signup")
 
         st.markdown('</div>', unsafe_allow_html=True)
+
         st.markdown('</div>', unsafe_allow_html=True)
-
-
-if __name__ == "__main__":
-    def test(page):
-        st.write("Navigate:", page)
-    render(test)
