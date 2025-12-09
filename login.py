@@ -4,9 +4,8 @@ import requests
 from io import BytesIO
 from PIL import Image
 
-
-BG_URL = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80"
 LOGO_URL = "https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
+BG_URL = "https://images.unsplash.com/photo-1526401281623-c3e51775f7c5?auto=format&fit=crop&w=1600&q=80"
 
 
 def set_background(url):
@@ -15,87 +14,109 @@ def set_background(url):
 
     st.markdown(f"""
     <style>
-    [data-testid="stAppViewContainer"] {{
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap');
+
+    html, body, [data-testid="stAppViewContainer"] {{
+        font-family: 'Poppins', sans-serif;
         background-image: url("data:image/jpeg;base64,{encoded}");
         background-size: cover;
-        background-repeat: no-repeat;
         background-position: center;
+        background-repeat: no-repeat;
     }}
 
+    /* remove default header */
     [data-testid="stHeader"] {{
         background: rgba(0,0,0,0);
     }}
 
-    .login-card {{
-        background: rgba(255, 255, 255, 0.92);
-        width: 480px;
-        padding: 35px 40px;
-        border-radius: 18px;
-        box-shadow: 0 8px 22px rgba(0,0,0,0.25);
-        margin-top: 60px;
-    }}
-
-    .contact {{
-        margin-top: 40px;
-        color: white;
-        font-size: 16px;
-        line-height: 1.8;
-        font-weight: 500;
+    /* Login card glass effect */
+    .card {{
+        width: 450px;
+        padding: 40px;
+        background: rgba(255,255,255,0.18);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        margin-top: 80px;
     }}
 
     .title {{
-        font-size: 30px;
+        font-size: 32px;
         font-weight: 800;
         text-align: center;
-        color: #0a206c;
-        margin-bottom: 28px;
+        margin-bottom: 30px;
+        color: #001b64;
     }}
 
-    .stButton>button {{
-        width: 100%;
-        padding: 13px;
-        border-radius: 8px;
-        font-size: 18px;
+    label {{
+        color: #001b64 !important;
         font-weight: 600;
-        background: #1947e3;
+    }}
+
+    .stTextInput>div>div>input {{
+        border-radius: 10px;
+        padding: 12px;
+        background: rgba(255,255,255,0.86);
+    }}
+
+    .primary-btn>button {{
+        width: 100%;
+        padding: 14px;
+        border-radius: 12px;
+        border: none;
+        font-weight: 700;
+        font-size: 18px;
+        background: linear-gradient(135deg,#0066ff,#0028a4);
+        color: white;
+    }}
+
+    .secondary-btn>button {{
+        width: 100%;
+        padding: 12px;
+        border-radius: 12px;
+        margin-top: 10px;
+        background: rgba(0,0,0,0.75);
         color: white;
         border: none;
+        font-size: 17px;
+        font-weight: 600;
     }}
 
     .link {{
         text-align:center;
-        font-size:13px;
         margin-top:10px;
-        color:#093682;
+        color:#0035c8;
+        font-size: 14px;
+        cursor:pointer;
+        font-weight:500;
     }}
 
-    .signup-btn>button {{
-        width: 100%;
-        padding: 13px;
-        border-radius: 8px;
-        font-size: 18px;
-        font-weight: 600;
-        background: #1a1a1a;
+    .contact {{
+        margin-top:60px;
+        font-size:17px;
+        line-height:1.8;
         color: white;
-        border: none;
+        font-weight:400;
     }}
     </style>
     """, unsafe_allow_html=True)
 
 
-def render(navigate_to):
+def render(navigate):
     st.set_page_config(layout="wide")
+
     set_background(BG_URL)
 
-    left, right = st.columns([1, 1])
+    col1, col2 = st.columns([1,1])
 
-    # LEFT SIDE
-    with left:
+    # LEFT PANEL
+    with col1:
         try:
             logo = Image.open(BytesIO(requests.get(LOGO_URL).content))
-            st.image(logo, width=260)
+            st.image(logo, width=300)
         except:
-            st.write("Logo error")
+            st.write("Logo load error")
 
         st.markdown("""
         <div class="contact">
@@ -106,29 +127,21 @@ def render(navigate_to):
         </div>
         """, unsafe_allow_html=True)
 
-    # RIGHT SIDE
-    with right:
-        st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    # RIGHT PANEL
+    with col2:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="title">LOGIN TO YOUR ACCOUNT</div>', unsafe_allow_html=True)
 
         email = st.text_input("Email Address")
         pwd = st.text_input("Password", type="password")
 
-        if st.button("LOGIN"):
-            st.success("UI Login working (no backend)")
-            if navigate_to:
-                navigate_to("Dashboard")
+        if st.button("Login", key="login", help="Login", use_container_width=True):
+            st.success("UI only — login working")
+            navigate("Dashboard")
 
-        st.markdown('<div class="link">Forgot Password?</div>', unsafe_allow_html=True)
+        st.markdown('<div class="link" onclick="window.location.href=\'#\'">Forgot Password?</div>', unsafe_allow_html=True)
 
-        if st.button("Click here to Sign Up", key="signup", help="Create Account", use_container_width=True):
-            if navigate_to:
-                navigate_to("User_Registration")
+        if st.button("Create a new account", key="signup", use_container_width=True):
+            navigate("Signup")
 
         st.markdown('</div>', unsafe_allow_html=True)
-
-
-if __name__ == "__main__":
-    def test(p):
-        st.write("NAVIGATE:", p)
-    render(test)
