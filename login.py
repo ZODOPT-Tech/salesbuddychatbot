@@ -42,24 +42,23 @@ def apply_styles():
         font-size: 15px !important;
     }}
 
-    /* -------- BUTTON FIX (WORKS IN ALL STREAMLIT) -------- */
-
-    /* PRIMARY BUTTON (Login) - MODIFIED: Removed width: 100% !important; */
-    div[data-testid="stVerticalBlock"] > div:first-child button,
-    div[data-testid="stVerticalBlock"] > div:first-child button span {{
+    /* -------- BUTTON FIXES -------- */
+    
+    /* PRIMARY BUTTON (Login) - Targets the custom wrapper in Python */
+    .login-btn-container button {{
         background-color: {PRIMARY_COLOR} !important;
         color: white !important;
-        /* width: 100% !important; <--- REMOVED */
+        width: 100% !important; /* Forces full width of its column */
         height: 48px !important;
         font-size: 17px !important;
         font-weight: 700 !important;
         border-radius: 8px !important;
         border: none !important;
+        margin-top: 15px; /* Added some space above the button */
     }}
 
     /* SECONDARY BUTTONS (Forgot + Create) */
-    .sec-container button,
-    .sec-container button span {{
+    .sec-container button {{
         background-color: {PRIMARY_COLOR} !important;
         color: white !important;
         width: 200px !important;
@@ -126,15 +125,12 @@ def render(navigate):
         st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
 
         try:
-            # Use a context manager for requests to ensure connection closure
             response = requests.get(LOGO_URL)
-            response.raise_for_status() # Raise an exception for bad status codes
+            response.raise_for_status() 
             logo = Image.open(BytesIO(response.content))
             st.image(logo, width=330)
-        except requests.exceptions.RequestException as e:
-            st.error(f"Logo failed to load: {e}")
         except Exception as e:
-            st.error(f"An unexpected error occurred: {e}")
+            st.error(f"Logo failed to load: {e}")
 
         st.markdown("""
         <div class="contact">
@@ -151,28 +147,35 @@ def render(navigate):
     with right:
         st.markdown("<div class='title'>LOGIN TO YOUR ACCOUNT</div>", unsafe_allow_html=True)
 
-        # The input fields
         email = st.text_input("Email Address")
         password = st.text_input("Password", type="password")
 
-        # Primary Button (Now takes the full width of the column, matching the inputs)
-        if st.button("Login"):
+        # --- FIX 1: Wrap login button in a custom div to force custom styling ---
+        st.markdown("<div class='login-btn-container'>", unsafe_allow_html=True)
+        # Primary Button (This will now be styled by the .login-btn-container CSS)
+        if st.button("Login", key="main_login_btn"):
             navigate("Dashboard")
+        st.markdown("</div>", unsafe_allow_html=True)
+        # -----------------------------------------------------------------------
 
-        # Secondary Button Container
+        # --- FIX 2: Use st.container for secondary buttons and let CSS handle layout ---
         st.markdown("<div class='sec-container'>", unsafe_allow_html=True)
 
-        col1, col2 = st.columns(2)
+        # Create two small columns inside the custom div to hold the buttons
+        sec_col1, sec_col2 = st.columns([1, 1]) 
 
-        with col1:
-            if st.button("Forgot Password?", key="forgot_btn"): # Added unique key
+        with sec_col1:
+            # Removed st.columns(2) from parent context
+            if st.button("Forgot Password?", key="forgot_btn"): 
                 navigate("Forgot")
 
-        with col2:
-            if st.button("Create Account", key="create_btn"): # Added unique key
+        with sec_col2:
+            # Removed st.columns(2) from parent context
+            if st.button("Create Account", key="create_btn"): 
                 navigate("Signup")
 
         st.markdown("</div>", unsafe_allow_html=True)
+        # ------------------------------------------------------------------------------
 
 
 # ---------------- TESTING ----------------
