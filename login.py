@@ -15,7 +15,6 @@ def apply_styles():
 
     /* GLOBAL FONT */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
     html, body, [data-testid="stAppViewContainer"] {{
         font-family: "Inter", sans-serif;
         background-color: #F6F8FB;
@@ -25,35 +24,7 @@ def apply_styles():
         background: transparent;
     }}
 
-    /* LEFT PANEL */
-    .left-panel {{
-        text-align: center;
-        padding-top: 90px;
-    }}
-
-    .contact {{
-        margin-top: 40px;
-        font-size: 16px;
-        font-weight: 500;
-        line-height: 2.2;
-        color: #1A1F36;
-        text-align: left;
-        width: 330px;
-        margin-left: auto;
-        margin-right: auto;
-    }}
-
-    /* RIGHT PANEL TITLE */
-    .title {{
-        font-size: 34px;
-        font-weight: 800;
-        margin-bottom: 35px;
-        margin-top: 90px;
-        color: {PRIMARY_COLOR};
-        text-align: left;
-    }}
-
-    /* LABELS */
+    /* INPUT LABEL FIX */
     .stTextInput label {{
         display: block !important;
         margin-bottom: 6px !important;
@@ -62,62 +33,95 @@ def apply_styles():
         color: #1A1F36 !important;
     }}
 
-    /* INPUT */
-    .stTextInput > div > div > input {{
+    /* INPUT FIELD */
+    .stTextInput input {{
         border-radius: 8px !important;
         height: 46px !important;
+        border: 1px solid #CBD5E0 !important;
         background: white !important;
         font-size: 15px !important;
-        border: 1px solid #CBD5E0 !important;
     }}
 
-    /* BUTTONS GLOBAL STYLE */
-    .stButton > button {{
+    /* -------- BUTTON FIX (WORKS IN ALL STREAMLIT) -------- */
+
+    /* PRIMARY BUTTON (Login) */
+    div[data-testid="stVerticalBlock"] > div:first-child button,
+    div[data-testid="stVerticalBlock"] > div:first-child button span {{
         background-color: {PRIMARY_COLOR} !important;
         color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        cursor: pointer;
-    }}
-
-    /* PRIMARY LOGIN BUTTON FULL WIDTH */
-    .login-btn > button {{
         width: 100% !important;
         height: 48px !important;
         font-size: 17px !important;
         font-weight: 700 !important;
-        margin-top: 12px;
+        border-radius: 8px !important;
+        border: none !important;
     }}
 
-    /* SECONDARY BUTTONS INLINE */
-    .button-row {{
-        display: flex;
-        justify-content: center;
-        gap: 32px;
-        margin-top: 20px;
-    }}
-
-    .button-row .stButton > button {{
-        width: 210px !important;
+    /* SECONDARY BUTTONS (Forgot + Create) */
+    .sec-container button,
+    .sec-container button span {{
+        background-color: {PRIMARY_COLOR} !important;
+        color: white !important;
+        width: 200px !important;
         height: 44px !important;
         font-size: 15px !important;
         font-weight: 600 !important;
+        border-radius: 8px !important;
+        border: none !important;
+    }}
+
+    /* Remove default hover */
+    button:hover {{
+        opacity: 0.92 !important;
+    }}
+
+    /* TITLE */
+    .title {{
+        font-size: 34px;
+        font-weight: 800;
+        margin-bottom: 32px;
+        margin-top: 80px;
+        color: {PRIMARY_COLOR};
+        text-align:left;
+    }}
+
+    /* LEFT SIDE */
+    .left-panel {{
+        text-align: center;
+        padding-top: 80px;
+    }}
+
+    .contact {{
+        margin-top: 35px;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 2.2;
+        width: 330px;
+        margin-left: auto;
+        margin-right: auto;
+        text-align:left;
+    }}
+
+    /* SECONDARY BUTTON WRAP */
+    .sec-container {{
+        display: flex;
+        justify-content: center;
+        gap: 28px;
+        margin-top: 20px;
     }}
 
     </style>
     """, unsafe_allow_html=True)
 
 
-# ---------------- PAGE UI ----------------
+# ---------------- PAGE CONTENT ----------------
 def render(navigate):
     st.set_page_config(layout="wide")
     apply_styles()
 
     left, right = st.columns([1.1, 1])
 
-    # -------- LEFT PANEL --------
+    # LEFT
     with left:
         st.markdown("<div class='left-panel'>", unsafe_allow_html=True)
 
@@ -138,22 +142,18 @@ def render(navigate):
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # -------- RIGHT PANEL --------
+    # RIGHT
     with right:
         st.markdown("<div class='title'>LOGIN TO YOUR ACCOUNT</div>", unsafe_allow_html=True)
 
-        # Inputs
         email = st.text_input("Email Address")
         password = st.text_input("Password", type="password")
 
-        # Login Button
-        st.markdown("<div class='login-btn'>", unsafe_allow_html=True)
+        # Primary
         if st.button("Login"):
             navigate("Dashboard")
-        st.markdown("</div>", unsafe_allow_html=True)
 
-        # Secondary Buttons
-        st.markdown("<div class='button-row'>", unsafe_allow_html=True)
+        st.markdown("<div class='sec-container'>", unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
 
@@ -168,9 +168,7 @@ def render(navigate):
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ---------------- SAMPLE NAVIGATION ----------------
+# ---------------- TESTING ----------------
 if __name__ == "__main__":
-    def dummy_navigate(page):
-        st.success(f"Navigate → {page}")
-
-    render(dummy_navigate)
+    def dummy_nav(x): st.success(f"Navigate → {x}")
+    render(dummy_nav)
