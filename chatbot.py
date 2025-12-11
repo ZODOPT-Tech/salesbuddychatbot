@@ -7,7 +7,6 @@ import random
 from io import BytesIO
 import google.generativeai as genai
 
-
 # ================== CONFIG =====================
 S3_BUCKET_NAME = "zodopt"
 S3_FILE_KEY = "Leaddata/Leads by Status.xlsx"
@@ -123,7 +122,6 @@ html, body {
 </style>
 """
 
-
 # ================== HELPERS =====================
 def get_remaining_api_credits():
     return random.randint(2000, 5000)
@@ -135,47 +133,66 @@ def get_secret():
         client = boto3.client("secretsmanager", region_name=AWS_REGION)
         val = client.get_secret_value(SecretId=GEMINI_SECRET_NAME)
         return json.loads(val["SecretString"])[GEMINI_SECRET_KEY]
-    except:
+    except Exception:
         return None
 
 
 @st.cache_data
 def load_data():
-    s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=S3_FILE_KEY)
-    df = pd.read_excel(BytesIO(obj["Body"].read()))
-    df.columns = df.columns.str.strip()
-    return df[REQUIRED_COLS]
+    try:
+        s3 = boto3.client("s3")
+        obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=S3_FILE_KEY)
+        df = pd.read_excel(BytesIO(obj["Body"].read()))
+        df.columns = df.columns.str.strip()
+        return df[REQUIRED_COLS]
+    except Exception:
+        # Return empty dataframe with required cols if S3/load fails
+        return pd.DataFrame(columns=REQUIRED_COLS)
 
 
 def ask_gemini(query, key):
-    genai.configure(api_key=key)
-    model = genai.GenerativeModel(GEMINI_MODEL)
-    response = model.generate_content(query)
-    return response.text
+    try:
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        response = model.generate_content(query)
+        return response.text
+    except Exception as e:
+        # graceful fallback
+        return f"Error contacting Gemini: {e}"
 
 
-# ================== MAIN UI =====================
-def run_salesbuddy():
+# ================== RENDER ENTRY POINT =====================
+def render(navigate, user_data=None, ACTION_CHIPS=None):
+    """
+    Main render function expected by main.py:
+        render(navigate, user_data, ACTION_CHIPS)
+
+    - `navigate` is a callable to change pages (main.py.navigate)
+    - `user_data` is a dict with at least 'full_name' / 'email' (optional)
+    - `ACTION_CHIPS` is a list of pipeline stage strings (optional)
+    """
 
     st.markdown(CSS, unsafe_allow_html=True)
 
+    # secrets / data (safe to fail)
     api_key = get_secret()
     credits = get_remaining_api_credits()
     df = load_data()
 
-    # Init session states
+    # initialize session state pieces used by this module (idempotent)
     if "chat" not in st.session_state:
         st.session_state.chat = [
-            {
-                "role": "ai",
-                "content": "Hello! I have loaded your CRM data. What would you like to know?",
-                "timestamp": time.strftime("%I:%M %p")
-            }
+            {"role": "ai",
+             "content": "Hello! I have loaded your CRM data. What would you like to know?",
+             "timestamp": time.strftime("%I:%M %p")}
         ]
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+
+    # provide default ACTION_CHIPS if caller didn't pass them
+    if ACTION_CHIPS is None:
+        ACTION_CHIPS = ["Qualification", "Needs Analysis", "Proposal/Price Quote", "Negotiation/Review", "Closed Won"]
 
     # ================== SIDEBAR =====================
     with st.sidebar:
@@ -194,11 +211,9 @@ def run_salesbuddy():
                 st.session_state.chat_history.append(st.session_state.chat)
 
             st.session_state.chat = [
-                {
-                    "role": "ai",
-                    "content": "Hello! How can I assist you today?",
-                    "timestamp": time.strftime("%I:%M %p")
-                }
+                {"role": "ai",
+                 "content": "Hello! How can I assist you today?",
+                 "timestamp": time.strftime("%I:%M %p")}
             ]
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -208,7 +223,15 @@ def run_salesbuddy():
             st.caption("No previous chats.")
         else:
             for i, hist in enumerate(st.session_state.chat_history):
-                title = hist[0]["content"][:25] + "..."
+                # title from first user or AI line for quick preview
+                preview = ""
+                for m in hist:
+                    if m.get("role") == "user":
+                        preview = m.get("content", "")[:30]; break
+                if not preview:
+                    preview = hist[0].get("content", "")[:30]
+
+                title = preview + ("..." if len(preview) >= 30 else "")
                 if st.button(f"💬 {title}", key=f"hist_{i}"):
                     st.session_state.chat = hist
                     st.rerun()
@@ -217,15 +240,18 @@ def run_salesbuddy():
     st.markdown("<div class='chat-wrapper'>", unsafe_allow_html=True)
 
     for msg in st.session_state.chat:
-        bubble = "msg-user" if msg["role"] == "user" else "msg-ai"
-        align_style = "margin-left:auto;" if msg["role"] == "user" else "margin-right:auto;"
+        bubble = "msg-user" if msg.get("role") == "user" else "msg-ai"
+        align_style = "margin-left:auto;" if msg.get("role") == "user" else "margin-right:auto;"
+
+        content = msg.get("content", "")
+        timestamp = msg.get("timestamp", "")
 
         st.markdown(
             f"""
             <div style="{align_style}">
                 <div class="{bubble}">
-                    {msg['content']}
-                    <div class="time">{msg['timestamp']}</div>
+                    {content}
+                    <div class="time">{timestamp}</div>
                 </div>
             </div>
             """,
@@ -250,8 +276,8 @@ def run_salesbuddy():
                 "timestamp": time.strftime("%I:%M %p")
             })
 
-            # AI Response
-            reply = ask_gemini(user_input, api_key)
+            # AI Response (use Gemini if available)
+            reply = ask_gemini(user_input, api_key) if api_key else "Gemini API key not configured."
 
             st.session_state.chat.append({
                 "role": "ai",
@@ -263,6 +289,4 @@ def run_salesbuddy():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# Run App
-run_salesbuddy()
+# end of chatbot.py
