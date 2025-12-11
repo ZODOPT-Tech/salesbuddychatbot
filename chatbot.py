@@ -7,6 +7,7 @@ import random
 from io import BytesIO
 import google.generativeai as genai
 
+
 # ================== CONFIG =====================
 S3_BUCKET_NAME = "zodopt"
 S3_FILE_KEY = "Leaddata/Leads by Status.xlsx"
@@ -21,115 +22,128 @@ REQUIRED_COLS = [
     "First Name", "Last Name", "Annual Revenue", "Lead Status"
 ]
 
-
-# ================== CSS =====================
+# ================== UI CSS =====================
 CSS = """
 <style>
-html, body, .stApp {
+
+html, body {
     margin:0 !important;
     padding:0 !important;
-    background:#f7f8fa;
+}
+.stApp {
+    background:#f8f9fc !important;
 }
 
-/* Main container full width */
+/* Remove streamlit header, footer, menu */
+#MainMenu, header, footer {visibility:hidden;}
+
+.sidebar {
+    background:#ffffff !important;
+}
+
 .block-container {
     padding:0 !important;
-    margin:0 auto !important;
-    max-width:900px !important;
 }
 
-/* --- Lead Section --- */
-.lead-card {
-    background:white;
-    padding:26px;
-    border-radius:16px;
-    margin-top:20px;
-    box-shadow:0 3px 14px rgba(0,0,0,0.06);
+/* ===== SIDEBAR ===== */
+.sidebar-logo {
+    text-align:center;
+    padding:25px 0 10px 0;
 }
-.lead-title {
-    font-size:20px;
-    font-weight:700;
-    margin-bottom:4px;
+.sidebar-logo img {
+    width:80px;
 }
-.lead-sub {
-    font-size:14px;
-    color:#777;
+.sidebar-title {
+    text-align:center;
+    font-size:26px;
+    font-weight:800;
+    margin-bottom:20px;
 }
 
-/* --- Chat Messages --- */
-.chat-container {
-    padding:20px 2px 120px 2px;
+.sidebar-button > button {
+    width:100%;
+    background:#eee !important;
+    color:#222 !important;
+    border-radius:10px !important;
+    padding:10px !important;
 }
 
-.msg-user {
-    background:#16a05c;
-    color:white;
-    padding:12px 18px;
-    border-radius:18px 18px 0 18px;
-    max-width:65%;
-    margin-left:auto;
-    margin-bottom:16px;
+/* ===== Chat Container ===== */
+.chat-wrapper {
+    padding:20px 40px 140px 40px;
 }
+
+/* AI message */
 .msg-ai {
     background:white;
-    padding:12px 18px;
-    border-radius:18px 18px 18px 0;
-    border:1px solid #eee;
-    max-width:65%;
-    margin-bottom:16px;
+    padding:14px 20px;
+    border-radius:16px 16px 16px 4px;
+    max-width:70%;
+    border:1px solid #ececec;
+    margin-bottom:12px;
 }
+
+/* User message */
+.msg-user {
+    background:#17a365;
+    color:white;
+    padding:14px 20px;
+    border-radius:16px 16px 4px 16px;
+    max-width:70%;
+    margin-left:auto;
+    margin-bottom:12px;
+}
+
 .time {
     font-size:11px;
     opacity:0.7;
-    margin-top:4px;
+    margin-top:6px;
 }
 
-/* --- Input Bar --- */
+/* Input Bar */
 .input-bar {
     position:fixed;
     bottom:0;
     left:0;
     right:0;
-    max-width:900px;
-    margin:auto;
+    padding:14px 20px;
     background:white;
-    padding:14px 10px;
     border-top:1px solid #ddd;
 }
-.send-btn {
-    height:48px;
-    width:70px;
-    background:#16a05c;
-    border-radius:12px;
-    font-size:17px;
-    color:white;
-    font-weight:600;
+.input-row {
+    display:flex;
+    gap:10px;
 }
-
+.send-btn {
+    background:#17a365 !important;
+    color:white !important;
+    border-radius:8px !important;
+    font-weight:600 !important;
+}
 </style>
 """
 
 
 # ================== HELPERS =====================
 def get_remaining_api_credits():
-    return random.randint(2500, 5000)
+    return random.randint(2000, 5000)
 
 
 @st.cache_resource
 def get_secret():
     try:
-        client = boto3.client('secretsmanager', region_name=AWS_REGION)
+        client = boto3.client("secretsmanager", region_name=AWS_REGION)
         val = client.get_secret_value(SecretId=GEMINI_SECRET_NAME)
-        return json.loads(val['SecretString'])[GEMINI_SECRET_KEY]
+        return json.loads(val["SecretString"])[GEMINI_SECRET_KEY]
     except:
         return None
 
 
 @st.cache_data
 def load_data():
-    s3 = boto3.client('s3')
+    s3 = boto3.client("s3")
     obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=S3_FILE_KEY)
-    df = pd.read_excel(BytesIO(obj['Body'].read()))
+    df = pd.read_excel(BytesIO(obj["Body"].read()))
     df.columns = df.columns.str.strip()
     return df[REQUIRED_COLS]
 
@@ -137,123 +151,107 @@ def load_data():
 def ask_gemini(query, key):
     genai.configure(api_key=key)
     model = genai.GenerativeModel(GEMINI_MODEL)
-    r = model.generate_content(query)
-    return r.text
+    response = model.generate_content(query)
+    return response.text
 
 
-# ================== MAIN RENDER =====================
-def render(navigate, user_data, ACTION_CHIPS):
+# ================== MAIN UI =====================
+def run_salesbuddy():
 
     st.markdown(CSS, unsafe_allow_html=True)
 
     api_key = get_secret()
-    df = load_data()
     credits = get_remaining_api_credits()
+    df = load_data()
 
-    # Initialize memory
+    # Init session states
     if "chat" not in st.session_state:
-        st.session_state.chat = []
+        st.session_state.chat = [
+            {
+                "role": "ai",
+                "content": "Hello! I have loaded your CRM data. What would you like to know?",
+                "timestamp": time.strftime("%I:%M %p")
+            }
+        ]
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    if "lead" not in st.session_state:
-        st.session_state.lead = {
-            "name":"Acme Corporation",
-            "score":"0%",
-            "status":"Qualification"
-        }
-
-    lead = st.session_state.lead
-
-    # ---------------------------------------------------------------------
-    # ⭐ CHATGPT-STYLE SIDEBAR
-    # ---------------------------------------------------------------------
+    # ================== SIDEBAR =====================
     with st.sidebar:
-
-        # Logo + Heading
         st.markdown("""
-            <div style='text-align:center;padding:18px 0;'>
-                <img src="https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
-                     style="width:70px;margin-bottom:10px;">
-                <div style="font-size:22px;font-weight:800;">SalesBuddy</div>
+            <div class='sidebar-logo'>
+                <img src="https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png">
             </div>
+            <div class='sidebar-title'>SalesBuddy</div>
             <hr>
         """, unsafe_allow_html=True)
 
         # New Chat Button
-        if st.button("➕  New Chat", use_container_width=True):
+        st.markdown("<div class='sidebar-button'>", unsafe_allow_html=True)
+        if st.button("➕  New Chat"):
             if len(st.session_state.chat) > 0:
                 st.session_state.chat_history.append(st.session_state.chat)
 
-            st.session_state.chat = [{
-                "role": "ai",
-                "content": "Hello! I have loaded your CRM data. What would you like to know?",
-                "timestamp": time.strftime("%I:%M %p")
-            }]
+            st.session_state.chat = [
+                {
+                    "role": "ai",
+                    "content": "Hello! How can I assist you today?",
+                    "timestamp": time.strftime("%I:%M %p")
+                }
+            ]
             st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        # History List
         st.markdown("### History")
         if len(st.session_state.chat_history) == 0:
             st.caption("No previous chats.")
         else:
-            for i, conv in enumerate(st.session_state.chat_history):
-                title = conv[0]["content"][:25] + "..." if len(conv[0]["content"]) > 25 else conv[0]["content"]
-
-                if st.button(f"💬 {title}", key=f"hist_{i}", use_container_width=True):
-                    st.session_state.chat = conv
+            for i, hist in enumerate(st.session_state.chat_history):
+                title = hist[0]["content"][:25] + "..."
+                if st.button(f"💬 {title}", key=f"hist_{i}"):
+                    st.session_state.chat = hist
                     st.rerun()
 
-    # ---------------------------------------------------------------------
-    # MAIN CHAT SCREEN
-    # ---------------------------------------------------------------------
+    # ================== CHAT WINDOW =====================
+    st.markdown("<div class='chat-wrapper'>", unsafe_allow_html=True)
 
-    # --- Lead card ---
-    st.markdown(f"""
-    <div class="lead-card">
-        <div class="lead-title">{lead['name']}</div>
-        <div class="lead-sub">Status: {lead['status']} • Score: {lead['score']}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # --- Messages ---
-    st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
     for msg in st.session_state.chat:
-        bubble_class = "msg-user" if msg["role"] == "user" else "msg-ai"
+        bubble = "msg-user" if msg["role"] == "user" else "msg-ai"
+        align_style = "margin-left:auto;" if msg["role"] == "user" else "margin-right:auto;"
+
         st.markdown(
             f"""
-            <div class='{bubble_class}'>
-                {msg['content']}
-                <div class='time'>{msg['timestamp']}</div>
+            <div style="{align_style}">
+                <div class="{bubble}">
+                    {msg['content']}
+                    <div class="time">{msg['timestamp']}</div>
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Input Bar ---
+    # ================== INPUT Bar =====================
     st.markdown("<div class='input-bar'>", unsafe_allow_html=True)
 
     with st.form("chat_form", clear_on_submit=True):
-        col1, col2 = st.columns([8, 1.2])
+        col1, col2 = st.columns([8, 1])
+        user_input = col1.text_input("", placeholder="Message SalesBuddy...", label_visibility="collapsed")
+        send = col2.form_submit_button("Send", use_container_width=True)
 
-        with col1:
-            query = st.text_input("", placeholder="Message SalesBuddy...")
-
-        with col2:
-            send = st.form_submit_button("Send", use_container_width=True)
-
-        if send and query:
+        if send and user_input:
             # Add user message
             st.session_state.chat.append({
                 "role": "user",
-                "content": query,
+                "content": user_input,
                 "timestamp": time.strftime("%I:%M %p")
             })
 
-            # Get AI Response
-            reply = ask_gemini(query, api_key)
+            # AI Response
+            reply = ask_gemini(user_input, api_key)
 
             st.session_state.chat.append({
                 "role": "ai",
@@ -264,3 +262,7 @@ def render(navigate, user_data, ACTION_CHIPS):
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+# Run App
+run_salesbuddy()
