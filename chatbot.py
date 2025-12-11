@@ -23,225 +23,125 @@ REQUIRED_COLS = [
 ]
 
 
-# ================== CSS =====================
+# ================== CSS (ChatGPT-Style) =====================
 CSS = """
 <style>
 
-html, body {
-    margin:0 !important;
-    padding:0 !important;
+body, html, .stApp {
+    background: #ffffff !important;
+    font-family: Inter;
 }
 
-.appview-container, .main, body {
-    padding:0 !important;
-    margin:0 !important;
-}
-
-.stApp {
-    background:#f6f7fb;
-    padding:0 !important;
-    margin:0 !important;
-}
-
-/* remove block container padding */
+/* Remove padding */
 .block-container {
-    padding-top:0 !important;
-    max-width:900px !important;
-    margin:0 auto !important;
+    padding-top: 0 !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
 }
 
-/* ===== Gradient Header ===== */
-.gradient-header {
-    position:fixed;
-    top:0;
-    left:0;
-    right:0;
-    max-width:900px;
-    margin:auto;
-    background:linear-gradient(90deg,#0066ff 0%,#7b00ff 100%);
-    border-radius:0 0 26px 26px;
-    padding:32px 36px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    color:white;
-    z-index:1000;
+/* Header like ChatGPT */
+.top-header {
+    position: fixed;
+    top: 0;
+    left: 0; right: 0;
+    background: #ffffff;
+    border-bottom: 1px solid #e6e6e6;
+    padding: 16px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 999;
 }
 
-.header-title {
-    font-size:38px;
-    font-weight:800;
+.top-title {
+    font-size: 22px;
+    font-weight: 700;
 }
 
-.logo-text {
-    font-size:36px;
-    font-weight:800;
+.brand-logo {
+    font-size: 22px;
+    font-weight: 800;
 }
-.logo-text span:nth-child(1){ color:#ff3c0a; }
-.logo-text span:nth-child(2){ color:#00c48c; }
+.brand-logo span:nth-child(1) { color: #ff3c0a; }
+.brand-logo span:nth-child(2) { color: #00c48c; }
 
-/* Body starts below header */
-.page-container {
-    padding-top:160px;
-    max-width:900px;
-    margin:auto;
-}
-
-.credits-line {
-    font-size:15px;
-    color:#666;
-    margin-bottom:14px;
+/* PAGE WRAPPER */
+.page {
+    padding-top: 90px;
+    padding-bottom: 120px;
 }
 
-
-/* ===== Lead Card ===== */
-.lead-section {
-    background:white;
-    border-radius:14px;
-    padding:20px 22px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border:1px solid #eee;
+/* Chat bubble layout */
+.chat-wrapper {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 10px 0;
 }
 
-.lead-left {
-    display:flex;
-    gap:14px;
-    align-items:center;
+.msg-ai, .msg-user {
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    width: fit-content;
+    max-width: 80%;
 }
 
-.lead-avatar {
-    width:50px;
-    height:50px;
-    border-radius:50%;
-    background:#854ce4;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-size:22px;
-    font-weight:700;
-}
-
-.lead-name {
-    font-size:19px;
-    font-weight:700;
-}
-
-.lead-score {
-    font-size:13px;
-    color:#777;
-}
-
-
-/* ===== Chips Force Horizontal ===== */
-.chip-bar {
-    margin-top:18px;
-    white-space:nowrap;
-    display:flex;
-    flex-direction:row;
-    gap:12px;
-    overflow-x:auto;
-    scrollbar-width:none;
-    padding-bottom:6px;
-}
-
-.chip-bar::-webkit-scrollbar {
-    display:none;
-}
-
-/* streamlit button overrides */
-[data-testid="stButton"] button {
-    display:inline-flex !important;
-    align-items:center;
-    white-space:nowrap;
-    padding:10px 22px !important;
-    border-radius:22px !important;
-    border:1px solid #ddd !important;
-    background:#fff !important;
-    font-size:15px !important;
-}
-
-[data-testid="stButton"] {
-    margin:0 !important;
-}
-
-.chip-active button {
-    background:#efe5ff !important;
-    border:1px solid #8035ff !important;
-    color:#8035ff !important;
-}
-
-
-/* ===== Chat ===== */
-.chat-container {
-    padding:20px 8px 100px 8px;
-}
-
-.msg-user {
-    background:#16a05c;
-    color:white;
-    padding:10px 16px;
-    border-radius:20px 20px 0 20px;
-    max-width:65%;
-    margin-left:auto;
-    margin-bottom:16px;
-}
-
+/* AI bubble (light gray like ChatGPT) */
 .msg-ai {
-    background:white;
-    border:1px solid #eee;
-    padding:10px 16px;
-    border-radius:20px 20px 20px 0;
-    max-width:65%;
-    margin-bottom:16px;
+    background: #f7f7f8;
+    border: 1px solid #ececec;
+    color: #111;
 }
 
-.time-u {
-    font-size:11px;
-    text-align:right;
-    margin-top:4px;
-    opacity:0.8;
+/* User bubble (greenish-white like ChatGPT) */
+.msg-user {
+    background: #dfffe7;
+    border: 1px solid #b2f7c6;
+    margin-left: auto;
+    color: #111;
 }
 
-.time-ai {
-    font-size:11px;
-    color:#777;
-    margin-top:4px;
+/* Timestamp */
+.time {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 4px;
 }
 
-
-/* ===== Input Bar ===== */
+/* Input Bar (fixed like ChatGPT) */
 .input-bar {
-    position:fixed;
-    bottom:0;
-    left:0;
-    right:0;
-    max-width:900px;
-    margin:auto;
-    background:white;
-    border-top:1px solid #eee;
-    padding:12px 14px;
+    position: fixed;
+    bottom: 0;
+    left: 0; right: 0;
+    background: white;
+    padding: 14px 16px;
+    border-top: 1px solid #e6e6e6;
 }
 
-.input-row {
-    display:flex;
-    gap:10px;
-    align-items:center;
+.input-inner {
+    max-width: 900px;
+    margin: auto;
+    display: flex;
+    gap: 10px;
 }
 
 .send-btn {
-    background:#16a05c;
-    color:white;
-    height:44px;
-    width:44px;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:18px;
-    cursor:pointer;
+    background: #16a05c;
+    border-radius: 8px;
+    color: white;
+    padding: 0 18px;
+    font-size: 16px;
+    cursor: pointer;
+    height: 46px;
+    display: flex;
+    align-items: center;
+}
+
+input[type=text] {
+    height: 46px;
+    border-radius: 8px;
 }
 
 </style>
@@ -276,7 +176,7 @@ def ask_gemini(query, key):
     return r.text
 
 
-# ================== MAIN RENDER =====================
+# ================== MAIN CHAT SCREEN =====================
 def render(navigate, user_data, ACTION_CHIPS):
 
     st.markdown(CSS, unsafe_allow_html=True)
@@ -290,91 +190,63 @@ def render(navigate, user_data, ACTION_CHIPS):
 
     if "lead" not in st.session_state:
         st.session_state.lead = {
-            "name":"Acme Corporation",
-            "score":"0%",
-            "status":"Qualification"
+            "name": "Acme Corporation",
+            "score": "0%",
+            "status": "Qualification"
         }
 
     lead = st.session_state.lead
 
 
-    # ====== HEADER ======
+    # ================= HEADER =================
     st.markdown("""
-    <div class="gradient-header">
-        <div class="header-title">SalesBuddy</div>
-        <div class="logo-text"><span>zod</span><span>opt</span></div>
+    <div class="top-header">
+        <div class="top-title">SalesBuddy Assistant</div>
+        <div class="brand-logo"><span>zod</span><span>opt</span></div>
     </div>
     """, unsafe_allow_html=True)
 
 
-    # ====== BODY WRAPPER ======
-    st.markdown("<div class='page-container'>", unsafe_allow_html=True)
+    # ================= PAGE WRAPPER =================
+    st.markdown("<div class='page'>", unsafe_allow_html=True)
 
 
-    # ====== CREDITS ======
-    st.markdown(f"<div class='credits-line'>Total API Credits Left: {credits:,}</div>", unsafe_allow_html=True)
-
-
-    # ====== LEAD CARD ======
+    # ================= LEAD SUMMARY (ChatGPT-style minimal) =================
     st.markdown(f"""
-    <div class="lead-section">
-        <div class="lead-left">
-            <div class="lead-avatar">A</div>
-            <div>
-                <div class="lead-name">{lead['name']}</div>
-                <div class="lead-score">Score: {lead['score']}</div>
-            </div>
-        </div>
-        <div style="font-size:22px;color:#666;">⋮</div>
+    <div style="margin-bottom:22px; padding: 10px 4px;">
+        <div style="font-size:14px; color:#777;">Lead:</div>
+        <div style="font-size:18px; font-weight:700;">{lead['name']}</div>
+        <div style="font-size:13px; color:#999;">Status: {lead['status']}</div>
+        <div style="font-size:13px; color:#999;">Score: {lead['score']}</div>
     </div>
     """, unsafe_allow_html=True)
 
 
-    # ====== CHIPS ======
-    st.markdown("<div class='chip-bar'>", unsafe_allow_html=True)
-    for chip in ACTION_CHIPS:
-        active_class = "chip-active" if chip == lead['status'] else ""
-        with st.container():
-            btn = st.button(chip, key=f"chip-{chip}")
-            if btn:
-                st.session_state.lead['status'] = chip
+    # ================= CHAT AREA =================
+    st.markdown("<div class='chat-wrapper'>", unsafe_allow_html=True)
 
-        if active_class:
-            st.markdown(
-                f"<style>[key='chip-{chip}']{{}} [key='chip-{chip}'] button{{background:#efe5ff !important;color:#8035ff !important;border-color:#8035ff !important;}}</style>",
-                unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-    # ====== CHAT ======
-    st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
     for msg in st.session_state.chat:
-        if msg["role"]=="user":
-            st.markdown(
-                f"<div class='msg-user'>{msg['content']}<div class='time-u'>{msg['timestamp']}</div></div>",
-                unsafe_allow_html=True)
-        else:
-            st.markdown(
-                f"<div class='msg-ai'>{msg['content']}<div class='time-ai'>{msg['timestamp']}</div></div>",
-                unsafe_allow_html=True)
+        bubble_class = "msg-user" if msg["role"] == "user" else "msg-ai"
+        st.markdown(
+            f"<div class='{bubble_class}'>{msg['content']}<div class='time'>{msg['timestamp']}</div></div>",
+            unsafe_allow_html=True
+        )
 
-
-    # ====== INPUT BAR ======
     st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("<div class='input-bar'>", unsafe_allow_html=True)
+
+
+    # ================= INPUT BAR =================
+    st.markdown("<div class='input-bar'><div class='input-inner'>", unsafe_allow_html=True)
 
     with st.form("chat_form", clear_on_submit=True):
-        col1, col2 = st.columns([10,1])
-        with col1:
-            query = st.text_input("", placeholder="Type a message...")
-        with col2:
-            send = st.form_submit_button("▶")
+        text = st.text_input("", placeholder="Message SalesBuddy...", key="input_msg")
+        send = st.form_submit_button("Send")
 
-        if send and query:
+        if send and text:
             st.session_state.chat.append({
-                "role":"user",
-                "content":query,
-                "timestamp":time.strftime("%I:%M %p")
+                "role": "user",
+                "content": text,
+                "timestamp": time.strftime("%I:%M %p")
             })
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
