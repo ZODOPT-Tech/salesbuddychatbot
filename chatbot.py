@@ -22,122 +22,88 @@ REQUIRED_COLS = [
 ]
 
 
-# ================== CSS (Fully Clean — No Header) =====================
+# ================== CSS =====================
 CSS = """
 <style>
-
-/* REMOVE STREAMLIT DEFAULT HEADER COMPLETELY */
-header[data-testid="stHeader"] { display: none !important; }
-div.block-container { padding-top: 0 !important; }
-
-/* FULL SCREEN CHAT UI */
 html, body, .stApp {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow: hidden; /* No browser scroll */
-    background: #ffffff;
-    font-family: Inter, system-ui;
+    margin:0 !important;
+    padding:0 !important;
+    background:#f7f8fa;
 }
 
-/* Page layout container */
-.page {
-    position: absolute;
-    top: 0;
-    bottom: 72px; /* input bar height */
-    left: 0; right: 0;
-    overflow-y: auto; /* internal chat scroll only */
-    padding: 20px;
-    display: flex;
-    justify-content: center;
+/* Main container full width */
+.block-container {
+    padding:0 !important;
+    margin:0 auto !important;
+    max-width:900px !important;
 }
 
-/* Chat column */
-.chat-column {
-    width: 780px;
-    max-width: calc(100% - 40px);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+/* --- Lead Section --- */
+.lead-card {
+    background:white;
+    padding:26px;
+    border-radius:16px;
+    margin-top:20px;
+    box-shadow:0 3px 14px rgba(0,0,0,0.06);
+}
+.lead-title {
+    font-size:20px;
+    font-weight:700;
+    margin-bottom:4px;
+}
+.lead-sub {
+    font-size:14px;
+    color:#777;
 }
 
-/* Lead Summary Card */
-.lead-summary {
-    background: white;
-    border-radius: 12px;
-    padding: 16px 20px;
-    border: 1px solid #efefef;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-/* Hide 3 dots or action icons */
-.lead-summary .lead-actions { display: none !important; }
-
-/* Chat Messages */
-.msg-ai, .msg-user {
-    padding: 14px 18px;
-    border-radius: 16px;
-    font-size: 16px;
-    line-height: 1.5;
-    width: fit-content;
-    max-width: 85%;
-    margin-bottom: 12px;
-}
-
-.msg-ai {
-    background: #f7f7f8;
-    border: 1px solid #ececec;
-    color: #111;
+/* --- Chat Messages --- */
+.chat-container {
+    padding:20px 2px 120px 2px;
 }
 
 .msg-user {
-    background: #dfffe7;
-    border: 1px solid #b2f7c6;
-    margin-left: auto;
-    color: #111;
+    background:#16a05c;
+    color:white;
+    padding:12px 18px;
+    border-radius:18px 18px 0 18px;
+    max-width:65%;
+    margin-left:auto;
+    margin-bottom:16px;
 }
-
+.msg-ai {
+    background:white;
+    padding:12px 18px;
+    border-radius:18px 18px 18px 0;
+    border:1px solid #eee;
+    max-width:65%;
+    margin-bottom:16px;
+}
 .time {
-    font-size: 11px;
-    opacity: 0.6;
-    margin-top: 4px;
+    font-size:11px;
+    opacity:0.7;
+    margin-top:4px;
 }
 
-/* Input bar */
+/* --- Input Bar --- */
 .input-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0; right: 0;
-    background: white;
-    border-top: 1px solid #e6e6e6;
-    padding: 12px 20px;
-    height: 72px;
-    display: flex;
-    justify-content: center;
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    max-width:900px;
+    margin:auto;
+    background:white;
+    padding:14px 10px;
+    border-top:1px solid #ddd;
 }
-
-.input-inner {
-    width: 780px;
-    max-width: calc(100% - 40px);
-    display: flex;
-    gap: 10px;
-}
-
-input.stTextInput {
-    border-radius: 12px !important;
-    height: 48px;
-}
-
 .send-btn {
-    background: #16a05c;
-    border-radius: 10px;
-    border: none;
-    padding: 0 18px;
-    color: white;
-    font-size: 15px;
-    cursor: pointer;
+    height:48px;
+    width:70px;
+    background:#16a05c;
+    border-radius:12px;
+    font-size:17px;
+    color:white;
+    font-weight:600;
 }
 
 </style>
@@ -181,69 +147,114 @@ def render(navigate, user_data, ACTION_CHIPS):
     st.markdown(CSS, unsafe_allow_html=True)
 
     api_key = get_secret()
+    df = load_data()
+    credits = get_remaining_api_credits()
 
+    # Initialize memory
     if "chat" not in st.session_state:
-        st.session_state.chat = [{
-            "role": "ai",
-            "content": "Hello! I have loaded your CRM data. What would you like to know about Acme Corporation?",
-            "timestamp": time.strftime("%I:%M %p")
-        }]
+        st.session_state.chat = []
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
 
     if "lead" not in st.session_state:
         st.session_state.lead = {
-            "name": "Acme Corporation",
-            "score": "0%",
-            "status": "Qualification"
+            "name":"Acme Corporation",
+            "score":"0%",
+            "status":"Qualification"
         }
 
     lead = st.session_state.lead
 
-    # ===== PAGE WRAPPER =====
-    st.markdown("<div class='page'>", unsafe_allow_html=True)
-    st.markdown("<div class='chat-column'>", unsafe_allow_html=True)
+    # ---------------------------------------------------------------------
+    # ⭐ CHATGPT-STYLE SIDEBAR
+    # ---------------------------------------------------------------------
+    with st.sidebar:
 
-    # ---- Lead Summary ----
+        # Logo + Heading
+        st.markdown("""
+            <div style='text-align:center;padding:18px 0;'>
+                <img src="https://raw.githubusercontent.com/ZODOPT-Tech/Wheelbrand/main/images/zodopt.png"
+                     style="width:70px;margin-bottom:10px;">
+                <div style="font-size:22px;font-weight:800;">SalesBuddy</div>
+            </div>
+            <hr>
+        """, unsafe_allow_html=True)
+
+        # New Chat Button
+        if st.button("➕  New Chat", use_container_width=True):
+            if len(st.session_state.chat) > 0:
+                st.session_state.chat_history.append(st.session_state.chat)
+
+            st.session_state.chat = [{
+                "role": "ai",
+                "content": "Hello! I have loaded your CRM data. What would you like to know?",
+                "timestamp": time.strftime("%I:%M %p")
+            }]
+            st.rerun()
+
+        # History List
+        st.markdown("### History")
+        if len(st.session_state.chat_history) == 0:
+            st.caption("No previous chats.")
+        else:
+            for i, conv in enumerate(st.session_state.chat_history):
+                title = conv[0]["content"][:25] + "..." if len(conv[0]["content"]) > 25 else conv[0]["content"]
+
+                if st.button(f"💬 {title}", key=f"hist_{i}", use_container_width=True):
+                    st.session_state.chat = conv
+                    st.rerun()
+
+    # ---------------------------------------------------------------------
+    # MAIN CHAT SCREEN
+    # ---------------------------------------------------------------------
+
+    # --- Lead card ---
     st.markdown(f"""
-    <div class='lead-summary'>
-        <div style='font-size:13px;color:#777;'>Lead</div>
-        <div style='font-size:20px;font-weight:700;'>{lead['name']}</div>
-        <div style='font-size:13px;color:#888;margin-top:4px;'>
-            Status: {lead['status']} • Score: {lead['score']}
-        </div>
+    <div class="lead-card">
+        <div class="lead-title">{lead['name']}</div>
+        <div class="lead-sub">Status: {lead['status']} • Score: {lead['score']}</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ---- Chat Messages ----
+    # --- Messages ---
+    st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
     for msg in st.session_state.chat:
-        bubble = "msg-user" if msg["role"] == "user" else "msg-ai"
+        bubble_class = "msg-user" if msg["role"] == "user" else "msg-ai"
         st.markdown(
-            f"<div class='{bubble}'>{msg['content']}<div class='time'>{msg['timestamp']}</div></div>",
-            unsafe_allow_html=True
+            f"""
+            <div class='{bubble_class}'>
+                {msg['content']}
+                <div class='time'>{msg['timestamp']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("</div></div>", unsafe_allow_html=True)  # close column + page
-
-
-    # ===== INPUT BAR =====
-    st.markdown("<div class='input-bar'><div class='input-inner'>", unsafe_allow_html=True)
+    # --- Input Bar ---
+    st.markdown("<div class='input-bar'>", unsafe_allow_html=True)
 
     with st.form("chat_form", clear_on_submit=True):
-        left, right = st.columns([8,1])
+        col1, col2 = st.columns([8, 1.2])
 
-        with left:
-            user_msg = st.text_input("", placeholder="Message SalesBuddy...")
+        with col1:
+            query = st.text_input("", placeholder="Message SalesBuddy...")
 
-        with right:
-            send = st.form_submit_button("Send")
+        with col2:
+            send = st.form_submit_button("Send", use_container_width=True)
 
-        if send and user_msg.strip():
+        if send and query:
+            # Add user message
             st.session_state.chat.append({
                 "role": "user",
-                "content": user_msg,
+                "content": query,
                 "timestamp": time.strftime("%I:%M %p")
             })
 
-            reply = "Processing your request..."  # Placeholder response
+            # Get AI Response
+            reply = ask_gemini(query, api_key)
+
             st.session_state.chat.append({
                 "role": "ai",
                 "content": reply,
@@ -252,4 +263,4 @@ def render(navigate, user_data, ACTION_CHIPS):
 
             st.rerun()
 
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
